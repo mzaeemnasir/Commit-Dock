@@ -5,12 +5,15 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 
 namespace CommitDock.Views
 {
     public partial class Preferences : ChromelessWindow
     {
+        private static List<string> _fontNames = null;
+
         public static readonly DirectProperty<Preferences, string> GitVersionProperty =
             AvaloniaProperty.RegisterDirect<Preferences, string>(
                 nameof(GitVersion),
@@ -245,6 +248,36 @@ namespace CommitDock.Views
                 await new Alert().ShowAsync(this, $"Failed to select theme override file: {ex.Message}", true);
             }
 
+            e.Handled = true;
+        }
+
+        /// <summary>
+        ///     Fonts offered in the font picker: the bundled ones first, then the system fonts.
+        /// </summary>
+        public static List<string> FontNames
+        {
+            get
+            {
+                if (_fontNames != null)
+                    return _fontNames;
+
+                var system = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var family in FontManager.Current.SystemFonts)
+                    system.Add(family.Name);
+
+                _fontNames = [.. App.BundledFonts];
+                foreach (var name in system)
+                {
+                    if (!_fontNames.Contains(name))
+                        _fontNames.Add(name);
+                }
+                return _fontNames;
+            }
+        }
+
+        private void OnResetDefaultFont(object _, RoutedEventArgs e)
+        {
+            ViewModels.Preferences.Instance.DefaultFontFamily = string.Empty;
             e.Handled = true;
         }
 
