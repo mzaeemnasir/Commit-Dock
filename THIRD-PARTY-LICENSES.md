@@ -76,6 +76,13 @@ The project uses the following third-party libraries or assets
 - **License**: SIL Open Font License, Version 1.1
 - **License Link**: https://github.com/JetBrains/JetBrainsMono/blob/v2.304/OFL.txt
 
+### Ubuntu Font Family
+
+- **Source**: https://github.com/google/fonts/tree/main/ufl/ubuntu
+- **Version**: 0.83
+- **License**: Ubuntu Font Licence, Version 1.0
+- **License Link**: https://ubuntu.com/legal/font-licence
+
 ## Grammar Files
 
 ### haxe-TmLanguage

@@ -58,7 +58,7 @@ namespace CommitDock
             builder.WithInterFont();
             builder.With(new FontManagerOptions()
             {
-                DefaultFamilyName = "fonts:Inter#Inter"
+                DefaultFamilyName = "fonts:CommitDock#Ubuntu"
             });
             builder.ConfigureFonts(manager =>
             {
