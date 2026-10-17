@@ -135,7 +135,7 @@
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate DataType="m:Commit">
                 <Border ClipToBounds="True" Background="Transparent">
-                  <Grid ColumnDefinitions="3,Auto,Auto,*" Margin="0,0,4,0" ClipToBounds="True">
+                  <Grid ColumnDefinitions="2,Auto,Auto,*" Margin="0,0,4,0" ClipToBounds="True">
                     <Rectangle Grid.Column="0"
                                Margin="0,2"
                                Fill="{Binding Color, Converter={x:Static c:IntConverters.ToGraphLaneBrush}}"
