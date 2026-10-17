@@ -273,6 +273,7 @@
                                          ShowTags="{Binding Source={x:Static vm:Preferences.Instance}, Path=ShowTagsInGraph}"
                                          FontSize="12"
                                          VerticalAlignment="Center"
+                                         MaxVisibleItems="1"
                                          UseGraphColor="{Binding IsHighlightedInGraph, Mode=OneWay}"
                                          UseCompactBranchNames="{Binding Source={x:Static vm:Preferences.Instance}, Path=UseCompactBranchNamesInGraph}"
                                          HasSingleRemote="{Binding $parent[v:Histories].HasSingleRemote}"/>
