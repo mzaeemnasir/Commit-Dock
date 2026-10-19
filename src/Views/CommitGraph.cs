@@ -37,6 +37,18 @@ namespace CommitDock.Views
             set => SetAndRaise(LayoutProperty, ref _layout, value);
         }
 
+        public static readonly DirectProperty<CommitGraph, List<Models.Commit>> SelectedCommitsProperty =
+            AvaloniaProperty.RegisterDirect<CommitGraph, List<Models.Commit>>(
+                nameof(SelectedCommits),
+                static o => o.SelectedCommits,
+                static (o, v) => o.SelectedCommits = v);
+
+        public List<Models.Commit> SelectedCommits
+        {
+            get => _selectedCommits;
+            set => SetAndRaise(SelectedCommitsProperty, ref _selectedCommits, value);
+        }
+
         public static readonly StyledProperty<IBrush> DotBrushProperty =
             AvaloniaProperty.Register<CommitGraph, IBrush>(nameof(DotBrush), Brushes.Transparent);
 
@@ -70,27 +82,30 @@ namespace CommitDock.Views
             if (_graph == null || _layout == null || Models.CommitGraph.Pens.Count == 0)
                 return;
 
-            var startY = _layout.StartY;
+            var top = _layout.StartY;
             var clipWidth = _layout.ClipWidth;
             var inset = _layout.TopInset;
             var clipHeight = Bounds.Height - inset;
             var rowHeight = _layout.RowHeight;
-            var endY = startY + clipHeight + 28;
+            var bottom = top + clipHeight + rowHeight;
 
             using (context.PushClip(new Rect(_layout.StartX, inset, clipWidth, clipHeight)))
-            using (context.PushTransform(Matrix.CreateTranslation(_layout.StartX, inset - startY)))
+            using (context.PushTransform(Matrix.CreateTranslation(_layout.StartX, inset - top)))
             {
-                DrawTrails(context, _graph, startY, endY, rowHeight, clipWidth);
-                DrawCurves(context, _graph, startY, endY, rowHeight);
-                DrawWipConnector(context, _graph, startY, endY, rowHeight, inset);
-                DrawAnchors(context, _graph, startY, endY, rowHeight);
+                DrawBands(context, top, bottom, rowHeight, clipWidth);
+
+                if (_showRefConnectors)
+                    DrawRefConnectors(context, top, bottom, rowHeight);
+
+                DrawLanes(context, top, bottom, rowHeight);
+                DrawNodes(context, top, bottom, rowHeight);
             }
 
             if (inset > 0)
             {
                 using (context.PushClip(new Rect(_layout.StartX, 0, clipWidth, inset)))
                 using (context.PushTransform(Matrix.CreateTranslation(_layout.StartX, 0)))
-                    DrawWipNode(context, _graph, inset);
+                    DrawWipNode(context, inset);
             }
         }
 
@@ -119,16 +134,30 @@ namespace CommitDock.Views
         {
             base.OnPropertyChanged(change);
 
-            if (change.Property == GraphProperty ||
-                change.Property == LayoutProperty ||
-                change.Property == DotBrushProperty)
+            if (change.Property == SelectedCommitsProperty)
+            {
+                _selected.Clear();
+                if (_selectedCommits != null)
+                {
+                    foreach (var c in _selectedCommits)
+                        _selected.Add(c.SHA);
+                }
+
                 InvalidateVisual();
+            }
+            else if (change.Property == GraphProperty ||
+                     change.Property == LayoutProperty ||
+                     change.Property == DotBrushProperty)
+            {
+                InvalidateVisual();
+            }
         }
 
-        private void DrawTrails(DrawingContext context, Models.CommitGraph graph, double top, double bottom, double rowHeight, double width)
+        private void DrawBands(DrawingContext context, double top, double bottom, double rowHeight, double width)
         {
-            // A soft band in the lane color runs from each commit to the edge of the graph column.
-            foreach (var dot in graph.Dots)
+            // A soft band in the lane color runs from each commit to the edge of the graph column, and lights up
+            // when the commit is selected.
+            foreach (var dot in _graph.Dots)
             {
                 var y = dot.Center.Y * rowHeight;
                 if (y < top - rowHeight)
@@ -136,71 +165,45 @@ namespace CommitDock.Views
                 if (y > bottom)
                     break;
 
-                var color = ((ISolidColorBrush)Models.CommitGraph.Pens[dot.Color].Brush).Color;
-                var brush = new SolidColorBrush(color, dot.IsHighlighted ? 0.13 : 0.05);
+                var opacity = _selected.Contains(dot.SHA) ? 0.34 : (dot.IsHighlighted ? 0.13 : 0.05);
+                var brush = new SolidColorBrush(Models.CommitGraph.GetColor(dot.Color), opacity);
                 context.FillRectangle(brush, new Rect(dot.Center.X, y - rowHeight / 2 + 2, Math.Max(0, width - dot.Center.X), rowHeight - 4));
             }
         }
 
-        private static Models.CommitGraph.Dot FindHead(Models.CommitGraph graph)
+        private void DrawRefConnectors(DrawingContext context, double top, double bottom, double rowHeight)
         {
-            foreach (var dot in graph.Dots)
+            // Thin guides from the branch/tag labels (in the column on the left) to their commits. They are drawn
+            // under the lanes so they never read as part of the history.
+            foreach (var dot in _graph.Dots)
             {
-                if (dot.Type == Models.CommitGraph.DotType.Head)
-                    return dot;
+                var y = dot.Center.Y * rowHeight;
+                if (y < top - rowHeight)
+                    continue;
+                if (y > bottom)
+                    break;
+
+                if (!dot.HasRefs)
+                    continue;
+
+                var radius = dot.Type == Models.CommitGraph.DotType.Merge ? MERGE_RADIUS : AVATAR_RADIUS;
+                var pen = GetRefConnectorPen(dot.Color, dot.IsHighlighted);
+                context.DrawLine(pen, new Point(0, y + 0.5), new Point(dot.Center.X - radius, y + 0.5));
             }
-
-            return null;
         }
 
-        private static double GetWipX(Models.CommitGraph graph)
-        {
-            return FindHead(graph)?.Center.X ?? Models.CommitGraph.LaneWidth / 2 + 8;
-        }
-
-        private static IBrush GetWipBrush(Models.CommitGraph graph)
-        {
-            var head = FindHead(graph);
-            return Models.CommitGraph.Pens[head?.Color ?? 0].Brush;
-        }
-
-        private void DrawWipNode(DrawingContext context, Models.CommitGraph graph, double inset)
-        {
-            // Uncommitted work: a dashed, hollow node sitting above the current HEAD's lane.
-            var center = new Point(GetWipX(graph), inset / 2);
-            var brush = GetWipBrush(graph);
-            context.DrawEllipse(DotBrush, new Pen(brush, 2, new DashStyle([2, 1.5], 0)), center, AVATAR_RADIUS - 1, AVATAR_RADIUS - 1);
-            context.DrawLine(new Pen(brush, 2, new DashStyle([0.1, 2.2], 0), PenLineCap.Round), new Point(center.X, center.Y + AVATAR_RADIUS + 1), new Point(center.X, inset + 2));
-        }
-
-        private void DrawWipConnector(DrawingContext context, Models.CommitGraph graph, double top, double bottom, double rowHeight, double inset)
-        {
-            if (inset <= 0)
-                return;
-
-            var head = FindHead(graph);
-            if (head == null)
-                return;
-
-            // Dotted line from the top of the list down to the HEAD commit, while HEAD is below the top edge.
-            var headY = head.Center.Y * rowHeight;
-            if (headY <= top)
-                return;
-
-            var pen = new Pen(Models.CommitGraph.Pens[head.Color].Brush, 2, new DashStyle([0.1, 2.2], 0), PenLineCap.Round);
-            context.DrawLine(pen, new Point(head.Center.X, top - 2), new Point(head.Center.X, Math.Min(headY, bottom)));
-        }
-
-        private void DrawCurves(DrawingContext context, Models.CommitGraph graph, double top, double bottom, double rowHeight)
+        private void DrawLanes(DrawingContext context, double top, double bottom, double rowHeight)
         {
             var dimmed = new List<(StreamGeometry, int)>();
             var highlighted = new List<(StreamGeometry, int)>();
+            var dimmedJunctions = new List<(StreamGeometry, int, double)>();
+            var highlightedJunctions = new List<(StreamGeometry, int, double)>();
+            StreamGeometry wip = null;
 
-            foreach (var link in graph.Links)
+            foreach (var link in _graph.Links)
             {
                 var startY = link.Start.Y * rowHeight;
                 var endY = link.End.Y * rowHeight;
-
                 if (endY < top)
                     continue;
                 if (startY > bottom)
@@ -209,118 +212,141 @@ namespace CommitDock.Views
                 var geo = new StreamGeometry();
                 using (var ctx = geo.Open())
                 {
-                    ctx.BeginFigure(new Point(link.Start.X, startY), false);
-                    ctx.QuadraticBezierTo(new Point(link.Control.X, link.Control.Y * rowHeight), new Point(link.End.X, endY));
+                    var start = new Point(link.Start.X, startY);
+                    ctx.BeginFigure(start, false);
+                    MergeOut(ctx, start, new Point(link.End.X, endY), rowHeight, IsCrossingForks(link.Start, link.End));
+                    ctx.EndFigure(false);
                 }
 
                 (link.IsHighlighted ? highlighted : dimmed).Add((geo, link.Color));
             }
 
-            foreach (var line in graph.Paths)
+            foreach (var path in _graph.Paths)
             {
-                var last = new Point(line.Points[0].X, line.Points[0].Y * rowHeight);
-                var size = line.Points.Count;
-                var endY = line.Points[size - 1].Y * rowHeight;
+                var points = path.Points;
+                var startY = points[0].Y * rowHeight;
+                var endY = points[^1].Y * rowHeight;
 
-                if (endY < top)
-                    continue;
-                if (last.Y > bottom)
+                // Paths are created row by row, so once one starts below the visible area all others do too.
+                if (startY > bottom + rowHeight)
                     break;
+                if (endY < top || points.Count < 2)
+                    continue;
 
                 var geo = new StreamGeometry();
+                var hasSegments = false;
                 using (var ctx = geo.Open())
                 {
-                    var started = false;
-                    var ended = false;
-                    for (int i = 1; i < size; i++)
+                    var cursor = new Point(points[0].X, startY);
+                    ctx.BeginFigure(cursor, false);
+
+                    for (var i = 1; i < points.Count; i++)
                     {
-                        var cur = new Point(line.Points[i].X, line.Points[i].Y * rowHeight);
-                        if (cur.Y < top)
-                        {
-                            last = cur;
-                            continue;
-                        }
+                        var from = points[i - 1];
+                        var to = new Point(points[i].X, points[i].Y * rowHeight);
 
-                        if (!started)
+                        if (Math.Abs(points[i].X - from.X) < 0.01)
                         {
-                            ctx.BeginFigure(last, false);
-                            started = true;
+                            if (to.Y > cursor.Y)
+                            {
+                                ctx.LineTo(to);
+                                cursor = to;
+                                hasSegments = true;
+                            }
                         }
-
-                        if (cur.Y > bottom)
+                        else if (IsRowCenter(from.Y))
                         {
-                            cur = new Point(cur.X, bottom);
-                            ended = true;
-                        }
-
-                        // Lane changes are drawn as smooth S-curves with vertical tangents at both ends.
-                        if (cur.X != last.X)
-                        {
-                            var midY = (last.Y + cur.Y) / 2;
-                            ctx.CubicBezierTo(new Point(last.X, midY), new Point(cur.X, midY), cur);
+                            // Out of a merge commit, into the merged branch's lane.
+                            cursor = MergeOut(ctx, cursor, to, rowHeight, IsCrossingForks(from, points[i]));
+                            hasSegments = true;
                         }
                         else
                         {
-                            ctx.LineTo(cur);
-                        }
+                            // Down a branch's lane and into the side of the commit it started from. Drawn on its own, so
+                            // where several branches start from one commit the nearer ones can be layered on top.
+                            var junction = new StreamGeometry();
+                            using (var jctx = junction.Open())
+                            {
+                                jctx.BeginFigure(cursor, false);
+                                DownThenHorizontal(jctx, cursor, to);
+                                jctx.EndFigure(false);
+                            }
 
-                        if (ended)
-                            break;
-                        last = cur;
+                            (path.IsHighlighted ? highlightedJunctions : dimmedJunctions).Add((junction, path.Color, Math.Abs(to.X - cursor.X)));
+                            cursor = to;
+                        }
                     }
+
+                    ctx.EndFigure(false);
                 }
 
-                (line.IsHighlighted ? highlighted : dimmed).Add((geo, line.Color));
+                if (!hasSegments)
+                    continue;
+
+                if (path.IsWip)
+                    wip = geo;
+                else
+                    (path.IsHighlighted ? highlighted : dimmed).Add((geo, path.Color));
             }
 
+            dimmedJunctions.Sort((l, r) => r.Item3.CompareTo(l.Item3));
+            highlightedJunctions.Sort((l, r) => r.Item3.CompareTo(l.Item3));
+
             foreach (var (geo, color) in dimmed)
-                context.DrawGeometry(null, Models.CommitGraph.DimPens[color], geo);
+                context.DrawGeometry(null, Models.CommitGraph.GetPen(color, false), geo);
+
+            foreach (var (geo, color, _) in dimmedJunctions)
+                context.DrawGeometry(null, Models.CommitGraph.GetPen(color, false), geo);
 
             foreach (var (geo, color) in highlighted)
-                context.DrawGeometry(null, Models.CommitGraph.Pens[color], geo);
+                context.DrawGeometry(null, Models.CommitGraph.GetPen(color), geo);
+
+            foreach (var (geo, color, _) in highlightedJunctions)
+                context.DrawGeometry(null, Models.CommitGraph.GetPen(color), geo);
+
+            if (wip != null)
+                context.DrawGeometry(null, GetWipPen(), wip);
         }
 
-        private void DrawAnchors(DrawingContext context, Models.CommitGraph graph, double top, double bottom, double rowHeight)
+        private void DrawNodes(DrawingContext context, double top, double bottom, double rowHeight)
         {
-            var halo = DotBrush;
+            var background = DotBrush;
+            var isDark = IsDark(background);
             var typeface = new Typeface(TextElement.GetFontFamily(this), FontStyle.Normal, FontWeight.Bold);
 
-            foreach (var dot in graph.Dots)
+            foreach (var dot in _graph.Dots)
             {
                 var center = new Point(dot.Center.X, dot.Center.Y * rowHeight);
-
-                if (center.Y < top)
+                if (center.Y < top - rowHeight)
                     continue;
                 if (center.Y > bottom)
                     break;
 
-                var pen = dot.IsHighlighted ? Models.CommitGraph.Pens[dot.Color] : Models.CommitGraph.DimPens[dot.Color];
+                var pen = Models.CommitGraph.GetPen(dot.Color, dot.IsHighlighted);
+                var isMerge = dot.Type == Models.CommitGraph.DotType.Merge;
+                var radius = isMerge ? MERGE_RADIUS : AVATAR_RADIUS;
 
-                // Connect the branch/tag labels (drawn in the column on the left) to this commit.
-                if (dot.HasRefs && _showRefConnectors)
-                    context.DrawLine(new Pen(pen.Brush, 2), new Point(-4, center.Y), center);
+                // HEAD gets a soft halo in its lane color.
+                if (dot.IsHead && dot.IsHighlighted)
+                    context.DrawEllipse(Models.CommitGraph.GlowPens[dot.Color % Models.CommitGraph.GlowPens.Count].Brush, null, center, radius + 5, radius + 5);
 
-                if (dot.Type == Models.CommitGraph.DotType.Merge)
+                // An opaque base keeps lanes from showing through dimmed or transparent nodes.
+                context.DrawEllipse(background, null, center, radius, radius);
+
+                if (isMerge)
                 {
-                    context.DrawEllipse(halo, null, center, 8, 8);
-                    context.DrawEllipse(pen.Brush, null, center, 6, 6);
+                    context.DrawEllipse(pen.Brush, null, center, radius, radius);
                     continue;
                 }
 
-                var isHead = dot.Type == Models.CommitGraph.DotType.Head;
-                if (isHead && dot.IsHighlighted)
-                    context.DrawEllipse(Models.CommitGraph.GlowPens[dot.Color].Brush, null, center, AVATAR_RADIUS + 6, AVATAR_RADIUS + 6);
-
-                context.DrawEllipse(halo, null, center, AVATAR_RADIUS + 2, AVATAR_RADIUS + 2);
-
                 using (context.PushOpacity(dot.IsHighlighted ? 1.0 : 0.4))
-                    DrawAvatar(context, dot, center, typeface);
+                    DrawAvatar(context, dot, center, typeface, isDark);
 
-                context.DrawEllipse(null, new Pen(Models.CommitGraph.Pens[dot.Color].Brush, isHead ? 3 : 2), center, AVATAR_RADIUS, AVATAR_RADIUS);
+                context.DrawEllipse(null, new Pen(pen.Brush, dot.IsHead ? 2.5 : 2), center, AVATAR_RADIUS, AVATAR_RADIUS);
             }
         }
 
-        private void DrawAvatar(DrawingContext context, Models.CommitGraph.Dot dot, Point center, Typeface typeface)
+        private void DrawAvatar(DrawingContext context, Models.CommitGraph.Dot dot, Point center, Typeface typeface, bool isDark)
         {
             var rect = new Rect(center.X - AVATAR_RADIUS, center.Y - AVATAR_RADIUS, AVATAR_RADIUS * 2, AVATAR_RADIUS * 2);
             var image = GetAvatar(dot.Author);
@@ -332,18 +358,117 @@ namespace CommitDock.Views
             }
 
             // No picture (yet): show the author's initials on a disc tinted with the lane color.
-            var color = ((ISolidColorBrush)Models.CommitGraph.Pens[dot.Color].Brush).Color;
-            var bg = new SolidColorBrush(Color.FromArgb(255, (byte)(color.R * 0.32), (byte)(color.G * 0.32), (byte)(color.B * 0.32)));
-            context.DrawEllipse(bg, null, center, AVATAR_RADIUS, AVATAR_RADIUS);
+            var color = Models.CommitGraph.GetColor(dot.Color);
+            context.DrawEllipse(new SolidColorBrush(color, isDark ? 0.3 : 0.16), null, center, AVATAR_RADIUS, AVATAR_RADIUS);
 
             var initials = new FormattedText(
                 GetInitials(dot.Author?.Name),
                 CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
                 typeface,
-                8,
-                new SolidColorBrush(color));
+                8.5,
+                isDark ? INITIALS_ON_DARK : new SolidColorBrush(color));
             context.DrawText(initials, new Point(center.X - initials.Width / 2, center.Y - initials.Height / 2));
+        }
+
+        private void DrawWipNode(DrawingContext context, double inset)
+        {
+            // Uncommitted work: a dashed, hollow node above HEAD, whose dotted lane continues in the rows below.
+            var center = new Point(Models.CommitGraph.GetLaneX(0), inset / 2);
+            var brush = Models.CommitGraph.GetPen(0).Brush;
+            context.DrawEllipse(DotBrush, new Pen(brush, 2, new DashStyle([2, 1.5], 0)), center, AVATAR_RADIUS - 1, AVATAR_RADIUS - 1);
+
+            if (_graph.Paths.Count > 0 && _graph.Paths[0].IsWip)
+                context.DrawLine(GetWipPen(), new Point(center.X, center.Y + AVATAR_RADIUS + 1), new Point(center.X, inset + 2));
+        }
+
+        private static void HorizontalThenDown(StreamGeometryContext ctx, Point from, Point to)
+        {
+            var dir = Math.Sign(to.X - from.X);
+            var r = Math.Min(CORNER_RADIUS, Math.Min(Math.Abs(to.X - from.X), to.Y - from.Y));
+            var c0 = new Point(to.X - dir * r, from.Y);
+            var c1 = new Point(to.X, from.Y + r);
+
+            ctx.LineTo(c0);
+            ctx.CubicBezierTo(new Point(c0.X + dir * r * KAPPA, c0.Y), new Point(c1.X, c1.Y - r * KAPPA), c1);
+            ctx.LineTo(to);
+        }
+
+        private static void DownThenHorizontal(StreamGeometryContext ctx, Point from, Point to)
+        {
+            var dir = Math.Sign(to.X - from.X);
+            var r = Math.Min(CORNER_RADIUS, Math.Min(Math.Abs(to.X - from.X), to.Y - from.Y));
+            var c0 = new Point(from.X, to.Y - r);
+            var c1 = new Point(from.X + dir * r, to.Y);
+
+            ctx.LineTo(c0);
+            ctx.CubicBezierTo(new Point(c0.X, c0.Y + r * KAPPA), new Point(c1.X - dir * r * KAPPA, c1.Y), c1);
+            ctx.LineTo(to);
+        }
+
+        /// <summary>
+        ///     Draws a merge line from a merge commit into the merged branch's lane and returns where it ends.
+        /// </summary>
+        private static Point MergeOut(StreamGeometryContext ctx, Point from, Point to, double rowHeight, bool fromBelow)
+        {
+            if (!fromBelow)
+            {
+                HorizontalThenDown(ctx, from, to);
+                return to;
+            }
+
+            // Like "|\" in `git log --graph`: drop out of the bottom of the merge commit, run along the row boundary
+            // below it, then turn down into the merged branch's lane.
+            var boundary = from.Y + rowHeight * 0.5;
+            var dir = Math.Sign(to.X - from.X);
+            var r = Math.Min(CORNER_RADIUS, Math.Abs(to.X - from.X) * 0.5);
+
+            ctx.LineTo(new Point(from.X, boundary - r));
+            var c0 = new Point(from.X + dir * r, boundary);
+            ctx.CubicBezierTo(new Point(from.X, boundary - r + r * KAPPA), new Point(c0.X - dir * r * KAPPA, boundary), c0);
+
+            var c1 = new Point(to.X - dir * r, boundary);
+            var c2 = new Point(to.X, boundary + r);
+            ctx.LineTo(c1);
+            ctx.CubicBezierTo(new Point(c1.X + dir * r * KAPPA, boundary), new Point(to.X, c2.Y - r * KAPPA), c2);
+            return c2;
+        }
+
+        /// <summary>
+        ///     Branches that start from a commit come into the right side of its node. A merge line heading right from the
+        ///     same commit would run over them, so it leaves from below the node instead.
+        /// </summary>
+        private bool IsCrossingForks(Point mergeCommit, Point target)
+        {
+            if (target.X <= mergeCommit.X)
+                return false;
+
+            var row = (int)Math.Floor(mergeCommit.Y);
+            return row >= 0 && row < _graph.Dots.Count && _graph.Dots[row].IsForkPoint;
+        }
+
+        private static bool IsRowCenter(double y)
+        {
+            return Math.Abs(y - Math.Floor(y) - 0.5) < 0.01;
+        }
+
+        private static bool IsDark(IBrush background)
+        {
+            if (background is not ISolidColorBrush solid)
+                return true;
+
+            var c = solid.Color;
+            return c.R * 0.299 + c.G * 0.587 + c.B * 0.114 < 128;
+        }
+
+        private static Pen GetWipPen()
+        {
+            return new Pen(Models.CommitGraph.GetPen(0).Brush, 2, new DashStyle([0.1, 2.2], 0), PenLineCap.Round);
+        }
+
+        public static Pen GetRefConnectorPen(int color, bool isHighlighted)
+        {
+            return new Pen(new SolidColorBrush(Models.CommitGraph.GetColor(color), isHighlighted ? 0.55 : 0.2), 1);
         }
 
         private Bitmap GetAvatar(Models.User user)
@@ -372,10 +497,20 @@ namespace CommitDock.Views
             return char.ToUpperInvariant(name.Trim()[0]).ToString();
         }
 
-        private const double AVATAR_RADIUS = 9.5;
+        /// <summary>
+        ///     Radius of a commit's avatar node, also used to place the hover area for its author's name.
+        /// </summary>
+        public const double AVATAR_RADIUS = 10;
+
+        private const double MERGE_RADIUS = 5.5;
+        private const double CORNER_RADIUS = 10;
+        private const double KAPPA = 0.5523;
+        private static readonly IBrush INITIALS_ON_DARK = new SolidColorBrush(Color.FromRgb(0xF4, 0xF3, 0xFA));
 
         private Models.CommitGraph _graph = null;
         private Models.CommitGraphLayout _layout = null;
+        private List<Models.Commit> _selectedCommits = null;
+        private readonly HashSet<string> _selected = new HashSet<string>();
         private bool _showRefConnectors = true;
         private readonly Dictionary<string, Bitmap> _avatars = new Dictionary<string, Bitmap>();
     }

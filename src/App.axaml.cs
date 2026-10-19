@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -123,7 +124,8 @@ namespace CommitDock
                 return;
 
             app.RequestedThemeVariant = Models.ThemeVariants.Parse(theme);
-            var variantPalette = Models.ThemeVariants.GetGraphPalette(app.RequestedThemeVariant);
+            app._graphPalette = Models.ThemeVariants.GetGraphPalette(app.RequestedThemeVariant);
+            app._graphPenThickness = 2;
 
             if (app._themeOverrides != null)
             {
@@ -147,11 +149,8 @@ namespace CommitDock
                     }
 
                     if (overrides.GraphColors.Count > 0)
-                        Models.CommitGraph.SetPens(overrides.GraphColors, overrides.GraphPenThickness);
-                    else if (variantPalette != null)
-                        Models.CommitGraph.SetPens(variantPalette, overrides.GraphPenThickness);
-                    else
-                        Models.CommitGraph.SetDefaultPens(overrides.GraphPenThickness);
+                        app._graphPalette = overrides.GraphColors;
+                    app._graphPenThickness = overrides.GraphPenThickness;
 
                     app.Resources.MergedDictionaries.Add(resDic);
                     app._themeOverrides = resDic;
@@ -161,14 +160,18 @@ namespace CommitDock
                     // ignore
                 }
             }
-            else if (variantPalette != null)
-            {
-                Models.CommitGraph.SetPens(variantPalette, 2);
-            }
+
+            app.ApplyGraphPens();
+        }
+
+        private void ApplyGraphPens()
+        {
+            // Without a palette of its own, the graph follows the actual light/dark appearance, which can change
+            // at runtime when the theme follows the system.
+            if (_graphPalette is { Count: > 0 })
+                Models.CommitGraph.SetPens(_graphPalette, _graphPenThickness);
             else
-            {
-                Models.CommitGraph.SetDefaultPens();
-            }
+                Models.CommitGraph.SetDefaultPens(ActualThemeVariant.IsDark(), _graphPenThickness);
         }
 
         public static void SetFonts(string defaultFont, string monospaceFont)
@@ -247,6 +250,8 @@ namespace CommitDock
             SetLocale(pref.Locale);
             SetTheme(pref.Theme, pref.ThemeOverrides);
             SetFonts(pref.DefaultFontFamily, pref.MonospaceFontFamily);
+
+            ActualThemeVariantChanged += (_, _) => ApplyGraphPens();
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -606,5 +611,7 @@ namespace CommitDock
         private ResourceDictionary _activeLocale = null;
         private ResourceDictionary _themeOverrides = null;
         private ResourceDictionary _fontsOverrides = null;
+        private List<Color> _graphPalette = null;
+        private double _graphPenThickness = 2;
     }
 }

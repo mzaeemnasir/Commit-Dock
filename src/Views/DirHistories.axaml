@@ -84,7 +84,7 @@
             <Border BorderBrush="{DynamicResource Brush.Border2}" BorderThickness="0,0,0,1" Padding="4">
               <Grid RowDefinitions="Auto,*">
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,96">
-                  <v:Avatar Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center" IsHitTestVisible="False" User="{Binding Author}"/>
+                  <v:Avatar Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center" IsContextMenuEnabled="False" User="{Binding Author}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Author.Name}" Margin="8,0,0,0" TextTrimming="CharacterEllipsis"/>
                   <TextBlock Grid.Column="2"
                              Text="{Binding SHA, Converter={x:Static c:StringConverters.ToShortSHA}}"

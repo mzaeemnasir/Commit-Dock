@@ -294,7 +294,7 @@ namespace CommitDock.Views
             var typefaceHead = new Typeface(FontFamily, FontStyle.Normal, FontWeight.Bold);
             var typefaceRemote = new Typeface(FontFamily, FontStyle.Italic, FontWeight.Bold);
             var fg = Foreground;
-            var normalBG = UseGraphColor ? Models.CommitGraph.Pens[commit.Color].Brush : Brushes.Gray;
+            var normalBG = UseGraphColor ? Models.CommitGraph.GetPen(commit.Color).Brush : Brushes.Gray;
             var labelSize = FontSize;
             var requiredHeight = PILL_HEIGHT;
             var x = 0.0;

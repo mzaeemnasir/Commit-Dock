@@ -45,7 +45,7 @@
               <v:Avatar Grid.Column="0"
                         Width="16" Height="16"
                         VerticalAlignment="Center"
-                        IsHitTestVisible="False"
+                        IsContextMenuEnabled="False"
                         User="{Binding Base.Author}"/>
               <TextBlock Grid.Column="1" Text="{Binding Base.Author.Name}" Margin="8,0,0,0"/>
               <TextBlock Grid.Column="2"
@@ -76,7 +76,7 @@
               <v:Avatar Grid.Column="0"
                         Width="16" Height="16"
                         VerticalAlignment="Center"
-                        IsHitTestVisible="False"
+                        IsContextMenuEnabled="False"
                         User="{Binding To.Author}"/>
               <TextBlock Grid.Column="1" Text="{Binding To.Author.Name}" Margin="8,0,0,0"/>
               <TextBlock Grid.Column="2"

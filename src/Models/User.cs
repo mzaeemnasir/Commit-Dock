@@ -9,6 +9,20 @@ namespace CommitDock.Models
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
 
+        /// <summary>
+        ///     The name to show for this user, falling back to the email address. Null when both are empty.
+        /// </summary>
+        public string DisplayName
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(Name))
+                    return Name;
+
+                return string.IsNullOrWhiteSpace(Email) ? null : Email;
+            }
+        }
+
         public User(string data)
         {
             var parts = data.Split('±', 2);
