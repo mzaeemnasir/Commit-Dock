@@ -223,10 +223,29 @@
                        Text="{DynamicResource Text.Preferences.Appearance.DefaultFont}"
                        HorizontalAlignment="Right"
                        Margin="0,0,16,0"/>
-            <TextBox Grid.Row="1" Grid.Column="1"
-                     Height="28"
-                     CornerRadius="3"
-                     Text="{Binding DefaultFontFamily, Mode=TwoWay}"/>
+            <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto">
+              <ComboBox Grid.Column="0"
+                        Height="28"
+                        HorizontalAlignment="Stretch"
+                        IsEditable="True"
+                        PlaceholderText="{DynamicResource Text.Preferences.Appearance.DefaultFont.Placeholder}"
+                        ItemsSource="{x:Static v:Preferences.FontNames}"
+                        Text="{Binding DefaultFontFamily, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" FontFamily="{Binding Converter={x:Static c:StringConverters.ToFontFamily}}"/>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Grid.Column="1"
+                      Classes="icon_button"
+                      Width="28" Height="28"
+                      Margin="4,0,0,0"
+                      Click="OnResetDefaultFont"
+                      ToolTip.Tip="{DynamicResource Text.Preferences.Appearance.DefaultFont.Reset}">
+                <Path Width="13" Height="13" Data="{StaticResource Icons.Undo}"/>
+              </Button>
+            </Grid>
 
             <TextBlock Grid.Row="2" Grid.Column="0"
                        Text="{DynamicResource Text.Preferences.Appearance.MonospaceFont}"

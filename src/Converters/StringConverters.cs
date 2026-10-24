@@ -3,12 +3,16 @@ using System.Globalization;
 
 using Avalonia.Data.Converters;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Styling;
 
 namespace CommitDock.Converters
 {
     public static class StringConverters
     {
+        public static readonly FuncValueConverter<string, FontFamily> ToFontFamily =
+            new(v => string.IsNullOrWhiteSpace(v) ? FontFamily.Default : FontFamily.Parse(App.MapBundledFonts(v)));
+
         public class ToLocaleConverter : IValueConverter
         {
             public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

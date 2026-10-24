@@ -157,8 +157,32 @@ namespace CommitDock.Views
             set => SetValue(ShowTagsProperty, value);
         }
 
+        public static readonly StyledProperty<bool> VerticalProperty =
+            AvaloniaProperty.Register<CommitRefsPresenter, bool>(nameof(Vertical));
+
+        public bool Vertical
+        {
+            get => GetValue(VerticalProperty);
+            set => SetValue(VerticalProperty, value);
+        }
+
+        public static readonly StyledProperty<int> MaxVisibleItemsProperty =
+            AvaloniaProperty.Register<CommitRefsPresenter, int>(nameof(MaxVisibleItems));
+
+        public int MaxVisibleItems
+        {
+            get => GetValue(MaxVisibleItemsProperty);
+            set => SetValue(MaxVisibleItemsProperty, value);
+        }
+
         public Models.Decorator DecoratorAt(Point point)
         {
+            if (Vertical)
+            {
+                var idx = (int)(point.Y / (PILL_HEIGHT + 4));
+                return idx >= 0 && idx < _items.Count ? _items[idx].Decorator : null;
+            }
+
             var x = 0.0;
             foreach (var item in _items)
             {
@@ -248,7 +272,23 @@ namespace CommitDock.Views
                 using (context.PushTransform(Matrix.CreateTranslation(x + 4, y + PILL_HEIGHT * 0.5 - 5)))
                     context.DrawGeometry(fg, null, icon);
 
-                x += item.Width + 4;
+                if (Vertical)
+                {
+                    y += PILL_HEIGHT + 4;
+                }
+                else
+                {
+                    x += item.Width + 4;
+                }
+            }
+
+            if (_more != null)
+            {
+                var moreRect = new RoundedRect(new Rect(x, y, _more.Width + MORE_PADDING * 2, PILL_HEIGHT), new CornerRadius(PILL_HEIGHT * 0.5));
+                if (bg != null)
+                    context.DrawRectangle(bg, null, moreRect);
+                context.DrawRectangle(null, new Pen(Brushes.Gray), moreRect);
+                context.DrawText(_more, new Point(x + MORE_PADDING, y + PILL_HEIGHT * 0.5 - _more.Height * 0.5));
             }
         }
 
@@ -263,7 +303,9 @@ namespace CommitDock.Views
                 change.Property == UseCompactBranchNamesProperty ||
                 change.Property == HasSingleRemoteProperty ||
                 change.Property == BackgroundProperty ||
-                change.Property == ShowTagsProperty)
+                change.Property == ShowTagsProperty ||
+                change.Property == VerticalProperty ||
+                change.Property == MaxVisibleItemsProperty)
                 InvalidateMeasure();
         }
 
@@ -276,6 +318,10 @@ namespace CommitDock.Views
         protected override Size MeasureOverride(Size availableSize)
         {
             _items.Clear();
+            _more = null;
+
+            if (MaxVisibleItems > 0)
+                ToolTip.SetTip(this, null);
 
             if (DataContext is not Models.Commit commit)
                 return new Size(0, 0);
@@ -389,6 +435,50 @@ namespace CommitDock.Views
                 }
             }
 
+            if (Vertical && _items.Count > 0)
+            {
+                var maxWidth = 0.0;
+                foreach (var item in _items)
+                    maxWidth = Math.Max(maxWidth, item.Width);
+
+                InvalidateVisual();
+                return new Size(maxWidth + 3, _items.Count * (PILL_HEIGHT + 4) - 4 + 1);
+            }
+
+            var maxVisible = MaxVisibleItems;
+            if (maxVisible > 0 && _items.Count > maxVisible)
+            {
+                var hidden = _items.Count - maxVisible;
+                _items.RemoveRange(maxVisible, hidden);
+                _more = new FormattedText(
+                    $"+{hidden}",
+                    CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    typefaceHead,
+                    labelSize,
+                    fg);
+
+                x = 0;
+                foreach (var item in _items)
+                    x += item.Width + 4;
+                x += _more.Width + MORE_PADDING * 2 + 1;
+
+                // The hidden refs are listed one per line when hovering the row's refs.
+                ToolTip.SetTip(this, new CommitRefsPresenter()
+                {
+                    DataContext = commit,
+                    Vertical = true,
+                    FontFamily = FontFamily,
+                    FontSize = FontSize,
+                    Foreground = Foreground,
+                    Background = Background,
+                    ShowTags = ShowTags,
+                    UseGraphColor = UseGraphColor,
+                    UseCompactBranchNames = UseCompactBranchNames,
+                    HasSingleRemote = HasSingleRemote,
+                });
+            }
+
             double requiredWidth = 0;
             if (_items.Count > 0)
             {
@@ -403,8 +493,10 @@ namespace CommitDock.Views
         }
 
         private const double PILL_HEIGHT = 20.0;
+        private const double MORE_PADDING = 7.0;
         private static readonly IBrush TAG_BRUSH = new SolidColorBrush(Color.FromRgb(0xC8, 0x96, 0x2E));
 
         private List<RenderItem> _items = new List<RenderItem>();
+        private FormattedText _more = null;
     }
 }
