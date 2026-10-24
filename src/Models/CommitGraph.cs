@@ -108,7 +108,6 @@ namespace CommitDock.Models
             public Point Center;
             public int Color;
             public bool IsHead;
-            public bool IsForkPoint;
             public bool IsHighlighted;
             public bool HasRefs;
             public User Author;
@@ -148,7 +147,6 @@ namespace CommitDock.Models
                 // Every lane waiting for this commit ends here. The leftmost one carries on as this commit's lane and
                 // the others fork into it.
                 var col = -1;
-                var isForkPoint = false;
                 Lane major = null;
                 for (var i = 0; i < lanes.Count; i++)
                 {
@@ -171,7 +169,6 @@ namespace CommitDock.Models
                     // The column is free again right away: a merged branch of this commit may take it.
                     lane.ForkInto(new Point(GetLaneX(col), y));
                     lanes[i] = null;
-                    isForkPoint = true;
                 }
 
                 if (major == null)
@@ -252,7 +249,6 @@ namespace CommitDock.Models
                     Center = position,
                     Color = col,
                     IsHead = commit.IsCurrentHead,
-                    IsForkPoint = isForkPoint,
                     IsHighlighted = isHighlighted,
                     HasRefs = commit.HasDecorators,
                     Author = commit.Author,
