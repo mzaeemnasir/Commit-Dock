@@ -185,7 +185,7 @@
                 <DataTemplate DataType="m:Commit">
                   <StackPanel MinWidth="400" Orientation="Vertical">
                     <Grid ColumnDefinitions="Auto,*,Auto">
-                      <v:Avatar Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center" IsHitTestVisible="False" User="{Binding Author}"/>
+                      <v:Avatar Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center" IsContextMenuEnabled="False" User="{Binding Author}"/>
                       <TextBlock Grid.Column="1" Text="{Binding Author.Name}" Margin="8,0,0,0"/>
                       <v:DateTimePresenter Grid.Column="2"
                                            Margin="8,0,0,0"

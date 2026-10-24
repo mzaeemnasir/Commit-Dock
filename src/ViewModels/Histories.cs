@@ -269,6 +269,13 @@ namespace CommitDock.ViewModels
             _repo = repo;
             _commitDetailSharedData = new CommitDetailSharedData();
             _searchCommitContext = new SearchCommitContext(repo.FullPath, this);
+
+            // Local changes get their own lane in the graph, so it is laid out again when they appear or go away.
+            _repo.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(Repository.LocalChangesCount) && (_repo.LocalChangesCount > 0) != _graphHasLocalChanges)
+                    GenerateGraph(_commits);
+            };
         }
 
         public bool HasShowFlag(Models.HistoryShowFlags flag)
@@ -653,7 +660,8 @@ namespace CommitDock.ViewModels
                     extraHeads.Add(c.SHA);
             }
 
-            Graph = Models.CommitGraph.Generate(commits, firstParentOnly, highlighting, extraHeads);
+            _graphHasLocalChanges = _repo.LocalChangesCount > 0;
+            Graph = Models.CommitGraph.Generate(commits, firstParentOnly, highlighting, extraHeads, _graphHasLocalChanges);
         }
 
         private Repository _repo = null;
@@ -665,6 +673,7 @@ namespace CommitDock.ViewModels
         private bool _isLoading = true;
         private List<Models.Commit> _commits = [];
         private Models.CommitGraph _graph = null;
+        private bool _graphHasLocalChanges = false;
         private List<Models.Commit> _selectedCommits = [];
         private Models.Bisect _bisect = null;
         private object _detailContext = Models.Null.Instance;

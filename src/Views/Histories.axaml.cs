@@ -836,9 +836,13 @@ namespace CommitDock.Views
             {
                 refsColumn.IsVisible = visible;
                 CommitGraph.ShowRefConnectors = visible;
+
+                // The graph becomes the first column, so its title has to clear the search and options buttons.
+                if (CommitListContainer.Columns[6].Header is TextBlock graphHeader)
+                    graphHeader.Margin = new Thickness(visible ? 10 : 58, 0, 0, 0);
             }
 
-            var width = listWidth >= 1100 ? 190 : (listWidth >= 800 ? 150 : 110);
+            var width = listWidth >= 1100 ? 200 : (listWidth >= 700 ? 160 : 130);
             if (visible && Math.Abs(refsColumn.Width.Value - width) > 0.5)
                 refsColumn.Width = new(width, DataGridLengthUnitType.Pixel);
         }
@@ -948,9 +952,9 @@ namespace CommitDock.Views
                     return;
                 }
 
-                if (e.Source is CommitRefsPresenter crp)
+                if (e.Source is GraphRefsPresenter refs)
                 {
-                    var decorator = crp.DecoratorAt(e.GetPosition(crp));
+                    var decorator = refs.DecoratorAt(e.GetPosition(refs));
                     var succ = await histories.CheckoutBranchByDecoratorAsync(decorator);
                     if (succ)
                         return;

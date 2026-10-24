@@ -17,17 +17,24 @@ namespace CommitDock.Models
         SelectedCommitsOnlyFirstParent,
     }
 
+    /// <summary>
+    ///     Lays commits out on fixed lanes: a branch keeps its column from its newest commit down to the commit it
+    ///     forked from, so lanes are straight vertical lines. Lines only move sideways at merges (out of a node) and
+    ///     fork points (into a node), and every lane is colored by its column.
+    ///     X coordinates are in pixels, Y coordinates are in rows (row N is centered at N + 0.5).
+    /// </summary>
     public class CommitGraph
     {
         public const double LaneWidth = 24;
+        public const double LaneMargin = 8;
 
         public static List<Pen> Pens { get; } = [];
         public static List<Pen> DimPens { get; } = [];
         public static List<Pen> GlowPens { get; } = [];
 
-        public static void SetDefaultPens(double thickness = 2)
+        public static void SetDefaultPens(bool isDark, double thickness = 2)
         {
-            SetPens(s_defaultPenColors, thickness);
+            SetPens(isDark ? s_darkPenColors : s_lightPenColors, thickness);
         }
 
         public static void SetPens(List<Color> colors, double thickness)
@@ -42,21 +49,47 @@ namespace CommitDock.Models
                 DimPens.Add(new Pen(new SolidColorBrush(c, 0.28), thickness, null, PenLineCap.Round, PenLineJoin.Round));
                 GlowPens.Add(new Pen(new SolidColorBrush(c, 0.16), thickness + 6, null, PenLineCap.Round, PenLineJoin.Round));
             }
-
-            s_penCount = colors.Count;
         }
 
-        public class Path(int color, bool isHighlighted)
+        /// <summary>
+        ///     Color indexes are lane columns, so they are wrapped here instead of when the graph is generated.
+        ///     That keeps them valid when the palette changes.
+        /// </summary>
+        public static Pen GetPen(int color, bool isHighlighted = true)
+        {
+            var pens = isHighlighted ? Pens : DimPens;
+            return pens.Count > 0 ? pens[color % pens.Count] : s_fallbackPen;
+        }
+
+        public static Color GetColor(int color)
+        {
+            return ((ISolidColorBrush)GetPen(color).Brush).Color;
+        }
+
+        public static double GetLaneX(int column)
+        {
+            return LaneMargin + LaneWidth * column + LaneWidth * 0.5;
+        }
+
+        /// <summary>
+        ///     One lane (or one highlighted/dimmed part of it). All points share the lane's X except the first one,
+        ///     which is the merge commit when the lane was opened by a merge, and the last one, which is the commit
+        ///     the lane forks from when it does not end in its own column.
+        /// </summary>
+        public class Path(int color, bool isHighlighted, bool isWip = false)
         {
             public List<Point> Points { get; } = [];
             public int Color { get; } = color;
             public bool IsHighlighted { get; } = isHighlighted;
+            public bool IsWip { get; } = isWip;
         }
 
+        /// <summary>
+        ///     A merge into a lane that already exists: leaves the merge commit horizontally and turns down into the lane.
+        /// </summary>
         public class Link
         {
             public Point Start;
-            public Point Control;
             public Point End;
             public int Color;
             public bool IsHighlighted;
@@ -65,15 +98,17 @@ namespace CommitDock.Models
         public enum DotType
         {
             Default,
-            Head,
             Merge,
         }
 
         public class Dot
         {
+            public string SHA;
             public DotType Type;
             public Point Center;
             public int Color;
+            public bool IsHead;
+            public bool IsForkPoint;
             public bool IsHighlighted;
             public bool HasRefs;
             public User Author;
@@ -84,76 +119,66 @@ namespace CommitDock.Models
         public List<Dot> Dots { get; } = [];
         public double Width { get; private set; } = 0;
 
-        public static CommitGraph Generate(List<Commit> commits, bool firstParentOnlyEnabled, CommitGraphHighlighting highlighting, HashSet<string> highlightExtraCommits)
+        public static CommitGraph Generate(List<Commit> commits, bool firstParentOnlyEnabled, CommitGraphHighlighting highlighting, HashSet<string> highlightExtraCommits, bool hasLocalChanges = false)
         {
-            const double unitWidth = LaneWidth;
-            const double halfWidth = LaneWidth / 2;
-            const double laneMargin = 8;
-            const double unitHeight = 1;
-            const double halfHeight = 0.5;
-
-            var temp = new CommitGraph();
-            var unsolved = new List<PathHelper>();
-            var ended = new List<PathHelper>();
-            var offsetY = -halfHeight;
-            var colorPicker = new ColorPicker();
+            var graph = new CommitGraph();
+            var lanes = new List<Lane>();
             var defHighlighting = highlighting == CommitGraphHighlighting.All;
+            var columns = 1;
 
-            foreach (var commit in commits)
+            // Local changes behave like a commit on top of HEAD: they open the first lane, and the dotted line from them
+            // runs straight down that lane to HEAD without crossing any other commit.
+            if (hasLocalChanges)
             {
-                PathHelper major = null;
+                var head = commits.Find(x => x.IsCurrentHead);
+                if (head != null)
+                {
+                    var wip = new Lane(head.SHA, 0, true, new Point(GetLaneX(0), -0.5), true);
+                    lanes.Add(wip);
+                    graph.Paths.Add(wip.Path);
+                }
+            }
 
-                // Update current y offset
-                offsetY += unitHeight;
-
-                // Find first curves that links to this commit and marks others that links to this commit ended.
-                var offsetX = laneMargin - halfWidth;
-                var maxOffsetOld = unsolved.Count > 0 ? unsolved[^1].LastX : offsetX + unitWidth;
+            for (var row = 0; row < commits.Count; row++)
+            {
+                var commit = commits[row];
+                var y = row + 0.5;
                 var isHighlighted = defHighlighting;
-                foreach (var l in unsolved)
+
+                // Every lane waiting for this commit ends here. The leftmost one carries on as this commit's lane and
+                // the others fork into it.
+                var col = -1;
+                var isForkPoint = false;
+                Lane major = null;
+                for (var i = 0; i < lanes.Count; i++)
                 {
-                    if (l.Next.Equals(commit.SHA, StringComparison.Ordinal))
-                    {
-                        if (major == null)
-                        {
-                            offsetX += unitWidth;
-                            major = l;
-                            isHighlighted = major.IsHighlighted;
+                    var lane = lanes[i];
+                    if (lane == null || !lane.Next.Equals(commit.SHA, StringComparison.Ordinal))
+                        continue;
 
-                            if (commit.Parents.Count > 0)
-                            {
-                                major.Next = commit.Parents[0];
-                                major.Goto(offsetX, offsetY, halfHeight);
-                            }
-                            else
-                            {
-                                major.End(offsetX, offsetY, halfHeight);
-                                ended.Add(l);
-                            }
-                        }
-                        else
-                        {
-                            l.End(major.LastX, offsetY, halfHeight);
-                            ended.Add(l);
-
-                            if (!isHighlighted && l.IsHighlighted)
-                                isHighlighted = true;
-                        }
-                    }
-                    else
+                    if (major == null)
                     {
-                        offsetX += unitWidth;
-                        l.Pass(offsetX, offsetY, halfHeight);
+                        col = i;
+                        major = lane;
+                        if (!lane.IsWip)
+                            isHighlighted = lane.IsHighlighted;
+                        continue;
                     }
+
+                    if (!isHighlighted && lane.IsHighlighted)
+                        isHighlighted = true;
+
+                    // The column is free again right away: a merged branch of this commit may take it.
+                    lane.ForkInto(new Point(GetLaneX(col), y));
+                    lanes[i] = null;
+                    isForkPoint = true;
                 }
 
-                // Remove ended curves from unsolved
-                foreach (var l in ended)
-                {
-                    colorPicker.Recycle(l.Path.Color);
-                    unsolved.Remove(l);
-                }
-                ended.Clear();
+                if (major == null)
+                    col = FindFreeColumn(lanes, -1);
+
+                var x = GetLaneX(col);
+                var position = new Point(x, y);
 
                 // Calculate highlighted state
                 if (!isHighlighted)
@@ -190,43 +215,48 @@ namespace CommitDock.Models
                 }
                 commit.IsHighlightedInGraph = isHighlighted;
 
-                // If no path found, create new curve for branch head
-                // Otherwise, create new curve for new merged commit
-                if (major == null)
+                // The dotted local-changes lane stops at HEAD; HEAD's own history continues below it as a normal lane.
+                if (major is { IsWip: true })
                 {
-                    offsetX += unitWidth;
+                    major.End(position);
+                    lanes[col] = null;
+                    major = null;
+                }
 
-                    if (commit.Parents.Count > 0)
+                if (commit.Parents.Count > 0)
+                {
+                    if (major == null)
                     {
-                        major = new PathHelper(commit.Parents[0], isHighlighted, colorPicker.Next(), new Point(offsetX, offsetY));
-                        unsolved.Add(major);
-                        temp.Paths.Add(major.Path);
+                        major = new Lane(commit.Parents[0], col, isHighlighted, position);
+                        SetLane(lanes, col, major);
+                        graph.Paths.Add(major.Path);
+                    }
+                    else
+                    {
+                        if (isHighlighted && !major.IsHighlighted)
+                            graph.Paths.Add(major.Highlight(y));
+
+                        major.Next = commit.Parents[0];
                     }
                 }
-                else if (isHighlighted && !major.IsHighlighted && commit.Parents.Count > 0)
+                else if (major != null)
                 {
-                    major.Highlight();
-                    temp.Paths.Add(major.Path);
+                    major.End(position);
+                    lanes[col] = null;
                 }
 
-                // Calculate link position of this commit.
-                var position = new Point(major?.LastX ?? offsetX, offsetY);
-                var dotColor = major?.Path.Color ?? 0;
-                var anchor = new Dot()
+                graph.Dots.Add(new Dot()
                 {
+                    SHA = commit.SHA,
+                    Type = commit.Parents.Count > 1 ? DotType.Merge : DotType.Default,
                     Center = position,
-                    Color = dotColor,
+                    Color = col,
+                    IsHead = commit.IsCurrentHead,
+                    IsForkPoint = isForkPoint,
                     IsHighlighted = isHighlighted,
                     HasRefs = commit.HasDecorators,
                     Author = commit.Author,
-                };
-                if (commit.IsCurrentHead)
-                    anchor.Type = DotType.Head;
-                else if (commit.Parents.Count > 1)
-                    anchor.Type = DotType.Merge;
-                else
-                    anchor.Type = DotType.Default;
-                temp.Dots.Add(anchor);
+                });
 
                 // Deal with other parents (the first parent has been processed)
                 if (!firstParentOnlyEnabled)
@@ -234,227 +264,195 @@ namespace CommitDock.Models
                     if (highlighting == CommitGraphHighlighting.SelectedCommitsOnlyFirstParent)
                         isHighlighted = false;
 
-                    for (int j = 1; j < commit.Parents.Count; j++)
+                    for (var j = 1; j < commit.Parents.Count; j++)
                     {
                         var parentHash = commit.Parents[j];
-                        var parent = unsolved.Find(x => x.Next.Equals(parentHash, StringComparison.Ordinal));
-                        if (parent != null)
-                        {
-                            if (isHighlighted && !parent.IsHighlighted)
-                            {
-                                parent.Goto(parent.LastX, offsetY + halfHeight, halfHeight);
-                                parent.Highlight();
-                                temp.Paths.Add(parent.Path);
-                            }
+                        if (parentHash.Equals(commit.Parents[0], StringComparison.Ordinal))
+                            continue;
 
-                            temp.Links.Add(new Link
+                        var target = -1;
+                        for (var i = 0; i < lanes.Count; i++)
+                        {
+                            if (lanes[i] is { IsWip: false } l && l.Next.Equals(parentHash, StringComparison.Ordinal))
+                            {
+                                target = i;
+                                break;
+                            }
+                        }
+
+                        if (target >= 0)
+                        {
+                            var lane = lanes[target];
+                            if (isHighlighted && !lane.IsHighlighted)
+                                graph.Paths.Add(lane.Highlight(y + 0.5));
+
+                            graph.Links.Add(new Link()
                             {
                                 Start = position,
-                                End = new Point(parent.LastX, offsetY + halfHeight),
-                                Control = new Point(parent.LastX, position.Y),
-                                Color = parent.Path.Color,
+                                End = new Point(GetLaneX(target), y + 0.5),
+                                Color = target,
                                 IsHighlighted = isHighlighted,
                             });
                         }
                         else
                         {
-                            offsetX += unitWidth;
-
-                            // Create new curve for parent commit that not includes before
-                            var l = new PathHelper(parentHash, isHighlighted, colorPicker.Next(), position, new Point(offsetX, position.Y + halfHeight));
-                            unsolved.Add(l);
-                            temp.Paths.Add(l.Path);
+                            // A merged branch gets the free column closest to the merge, so the merge line stays short.
+                            var column = FindFreeColumn(lanes, col);
+                            var lane = new Lane(parentHash, column, isHighlighted, position, new Point(GetLaneX(column), y + 0.5));
+                            SetLane(lanes, column, lane);
+                            graph.Paths.Add(lane.Path);
                         }
                     }
                 }
 
-                // Margins & colors (used by Views.Histories).
-                commit.Color = dotColor;
-                commit.LeftMargin = Math.Max(offsetX, maxOffsetOld) + halfWidth + 2;
-                temp.Width = Math.Max(temp.Width, commit.LeftMargin);
-            }
-
-            // Deal with curves haven't ended yet.
-            for (var i = 0; i < unsolved.Count; i++)
-            {
-                var path = unsolved[i];
-                var endY = (commits.Count - 0.5) * unitHeight;
-
-                if (path.Path.Points.Count == 1 && Math.Abs(path.Path.Points[0].Y - endY) < 0.0001)
-                    continue;
-
-                path.End((i + 0.5) * unitWidth + laneMargin, endY + halfHeight, halfHeight);
-            }
-            unsolved.Clear();
-
-            return temp;
-        }
-
-        private class ColorPicker
-        {
-            public int Next()
-            {
-                if (_colorsQueue.Count == 0)
+                var used = col + 1;
+                for (var i = lanes.Count - 1; i >= used; i--)
                 {
-                    for (var i = 0; i < s_penCount; i++)
-                        _colorsQueue.Enqueue(i);
+                    if (lanes[i] != null)
+                    {
+                        used = i + 1;
+                        break;
+                    }
                 }
 
-                return _colorsQueue.Dequeue();
+                columns = Math.Max(columns, used);
+                commit.Color = col;
+                commit.GraphX = x;
             }
 
-            public void Recycle(int idx)
-            {
-                if (!_colorsQueue.Contains(idx))
-                    _colorsQueue.Enqueue(idx);
-            }
+            // Lanes whose parents are not loaded run off the bottom of the list.
+            var bottom = (double)commits.Count;
+            foreach (var lane in lanes)
+                lane?.End(new Point(lane.X, bottom));
 
-            private Queue<int> _colorsQueue = new Queue<int>();
+            graph.Width = LaneMargin * 1.5 + columns * LaneWidth;
+            return graph;
         }
 
-        private class PathHelper
+        private static int FindFreeColumn(List<Lane> lanes, int near)
         {
-            public Path Path { get; private set; }
+            bool IsFree(int i) => i >= lanes.Count || lanes[i] == null;
+
+            // New branches take the leftmost free column.
+            if (near < 0)
+            {
+                for (var i = 0; i < lanes.Count; i++)
+                {
+                    if (IsFree(i))
+                        return i;
+                }
+
+                return lanes.Count;
+            }
+
+            // Merged branches take the nearest free column, preferring the right side.
+            for (var d = 1; ; d++)
+            {
+                if (IsFree(near + d))
+                    return near + d;
+
+                var left = near - d;
+                if (left >= 0 && IsFree(left))
+                    return left;
+            }
+        }
+
+        private static void SetLane(List<Lane> lanes, int column, Lane lane)
+        {
+            while (lanes.Count <= column)
+                lanes.Add(null);
+
+            lanes[column] = lane;
+        }
+
+        private class Lane
+        {
             public string Next { get; set; }
-            public double LastX { get; private set; }
-            public bool IsHighlighted { get => Path.IsHighlighted; }
+            public Path Path { get; private set; }
+            public double X { get; }
+            public bool IsWip => Path.IsWip;
+            public bool IsHighlighted => Path.IsHighlighted;
 
-            public PathHelper(string next, bool IsHighlighted, int color, Point start)
+            public Lane(string next, int column, bool isHighlighted, Point start, bool isWip = false)
             {
                 Next = next;
-                LastX = start.X;
-                _lastY = start.Y;
-
-                Path = new Path(color, IsHighlighted);
+                X = GetLaneX(column);
+                Path = new Path(column, isHighlighted, isWip);
                 Path.Points.Add(start);
             }
 
-            public PathHelper(string next, bool IsHighlighted, int color, Point start, Point to)
+            public Lane(string next, int column, bool isHighlighted, Point from, Point start)
+                : this(next, column, isHighlighted, from)
             {
-                Next = next;
-                LastX = to.X;
-                _lastY = to.Y;
-
-                Path = new Path(color, IsHighlighted);
-                Path.Points.Add(start);
-                Path.Points.Add(to);
+                Add(start);
             }
 
             /// <summary>
-            ///     A path that just passed this row.
+            ///     Ends this lane in its own column.
             /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="halfHeight"></param>
-            public void Pass(double x, double y, double halfHeight)
+            public void End(Point at)
             {
-                if (x > LastX)
-                {
-                    Add(LastX, _lastY);
-                    Add(x, y - halfHeight);
-                }
-                else if (x < LastX)
-                {
-                    Add(LastX, y - halfHeight);
-                    y += halfHeight;
-                    Add(x, y);
-                }
-
-                LastX = x;
-                _lastY = y;
+                Add(new Point(X, at.Y));
             }
 
             /// <summary>
-            ///     A path that has commit in this row but not ended
+            ///     Ends this lane in the commit it forked from, which sits in another column of the same row.
             /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="halfHeight"></param>
-            public void Goto(double x, double y, double halfHeight)
+            public void ForkInto(Point node)
             {
-                if (x > LastX)
-                {
-                    Add(LastX, _lastY);
-                    Add(x, y - halfHeight);
-                }
-                else if (x < LastX)
-                {
-                    var minY = y - halfHeight;
-                    if (minY > _lastY)
-                        minY -= halfHeight;
-
-                    Add(LastX, minY);
-                    Add(x, y);
-                }
-
-                LastX = x;
-                _lastY = y;
+                Add(new Point(X, node.Y - 0.5));
+                Add(node);
             }
 
             /// <summary>
-            ///     A path that has commit in this row and end.
+            ///     Highlights this lane from the given row position on, and returns the new highlighted part.
             /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="halfHeight"></param>
-            public void End(double x, double y, double halfHeight)
+            public Path Highlight(double y)
             {
-                if (x > LastX)
-                {
-                    Add(LastX, _lastY);
-                    Add(x, y - halfHeight);
-                }
-                else if (x < LastX)
-                {
-                    Add(LastX, y - halfHeight);
-                }
+                var at = new Point(X, y);
+                Add(at);
 
-                Add(x, y);
-
-                LastX = x;
-                _lastY = y;
+                Path = new Path(Path.Color, true);
+                Path.Points.Add(at);
+                return Path;
             }
 
-            /// <summary>
-            ///     End the current path and create a new highlighted from the end.
-            /// </summary>
-            public void Highlight()
+            private void Add(Point p)
             {
-                var color = Path.Color;
-                Add(LastX, _lastY);
-
-                Path = new Path(color, true);
-                Path.Points.Add(new Point(LastX, _lastY));
-                _endY = 0;
+                var last = Path.Points[^1];
+                if (p.Y > last.Y || (p.Y == last.Y && p.X != last.X))
+                    Path.Points.Add(p);
             }
-
-            private void Add(double x, double y)
-            {
-                if (_endY < y)
-                {
-                    Path.Points.Add(new Point(x, y));
-                    _endY = y;
-                }
-            }
-
-            private double _lastY = 0;
-            private double _endY = 0;
         }
 
-        private static int s_penCount = 0;
-        private static readonly List<Color> s_defaultPenColors = [
-            Color.Parse("#9D8CFF"), // violet
-            Color.Parse("#3DD6E0"), // cyan
-            Color.Parse("#FF8A6B"), // coral
-            Color.Parse("#5EE6A0"), // mint
-            Color.Parse("#FFC857"), // amber
-            Color.Parse("#FF6FAE"), // pink
-            Color.Parse("#5AA9FF"), // sky
-            Color.Parse("#B8E05C"), // lime
-            Color.Parse("#FFA94D"), // orange
-            Color.Parse("#C792EA"), // orchid
-            Color.Parse("#FF6B6B"), // red
-            Color.Parse("#2EC4B6"), // teal
+        private static readonly Pen s_fallbackPen = new Pen(Brushes.Gray, 2);
+
+        // Ordered around the color wheel, so neighbouring lanes always get clearly different colors.
+        private static readonly List<Color> s_darkPenColors = [
+            Color.Parse("#18A7CC"), // cyan
+            Color.Parse("#2E74F5"), // blue
+            Color.Parse("#9C40E8"), // violet
+            Color.Parse("#CF35C0"), // magenta
+            Color.Parse("#E92A80"), // pink
+            Color.Parse("#E8433F"), // red
+            Color.Parse("#F26B32"), // orange
+            Color.Parse("#F2C437"), // yellow
+            Color.Parse("#7DD33F"), // green
+            Color.Parse("#2FCB9D"), // teal
+        ];
+
+        // The same hues, deep enough to stay readable as thin lines on a white background.
+        private static readonly List<Color> s_lightPenColors = [
+            Color.Parse("#0B8AAD"), // cyan
+            Color.Parse("#1E5FD6"), // blue
+            Color.Parse("#8331C9"), // violet
+            Color.Parse("#B0249F"), // magenta
+            Color.Parse("#CC1F6A"), // pink
+            Color.Parse("#C93030"), // red
+            Color.Parse("#D2541A"), // orange
+            Color.Parse("#B08600"), // yellow
+            Color.Parse("#4C9A1C"), // green
+            Color.Parse("#0F9A78"), // teal
         ];
     }
 }

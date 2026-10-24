@@ -189,7 +189,7 @@
                             VerticalAlignment="Center"
                             User="{Binding Author}"
                             Opacity="{Binding IsMerged, Converter={x:Static c:BoolConverters.IsMergedToOpacity}}"
-                            IsHitTestVisible="False"/>
+                            IsContextMenuEnabled="False"/>
 
                   <Border Grid.Column="1" Padding="8,0" ClipToBounds="True">
                     <TextBlock Text="{Binding Author.Name}"
@@ -260,35 +260,39 @@
           </DataGridTemplateColumn>
           <DataGridTemplateColumn Width="170" MinWidth="60" IsReadOnly="True">
             <DataGridTemplateColumn.Header>
-              <TextBlock Classes="table_header" Margin="58,0,0,0" Text="{DynamicResource Text.Histories.Header.Refs}" HorizontalAlignment="Left"/>
+              <TextBlock Classes="table_header" Margin="58,0,8,0" Text="{DynamicResource Text.Histories.Header.Refs}" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis"/>
             </DataGridTemplateColumn.Header>
 
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate DataType="m:Commit">
-                <Border ClipToBounds="True" Background="Transparent">
-                  <v:CommitRefsPresenter HorizontalAlignment="Right"
-                                         Margin="4,0,0,0"
-                                         Background="{DynamicResource Brush.Contents}"
-                                         Foreground="{DynamicResource Brush.FG1}"
-                                         ShowTags="{Binding Source={x:Static vm:Preferences.Instance}, Path=ShowTagsInGraph}"
-                                         FontSize="12"
-                                         VerticalAlignment="Center"
-                                         UseGraphColor="{Binding IsHighlightedInGraph, Mode=OneWay}"
-                                         UseCompactBranchNames="{Binding Source={x:Static vm:Preferences.Instance}, Path=UseCompactBranchNamesInGraph}"
-                                         HasSingleRemote="{Binding $parent[v:Histories].HasSingleRemote}"/>
-                </Border>
+                <v:GraphRefsPresenter Background="{DynamicResource Brush.Contents}"
+                                      Foreground="{DynamicResource Brush.FG1}"
+                                      SecondaryForeground="{DynamicResource Brush.FG2}"
+                                      ShowTags="{Binding Source={x:Static vm:Preferences.Instance}, Path=ShowTagsInGraph}"
+                                      FontSize="12"
+                                      UseGraphColor="{Binding IsHighlightedInGraph, Mode=OneWay}"
+                                      UseCompactBranchNames="{Binding Source={x:Static vm:Preferences.Instance}, Path=UseCompactBranchNamesInGraph}"
+                                      HasSingleRemote="{Binding $parent[v:Histories].HasSingleRemote}"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
           <DataGridTemplateColumn Width="120" IsReadOnly="True">
             <DataGridTemplateColumn.Header>
-              <TextBlock Classes="table_header" Margin="10,0,0,0" Text="{DynamicResource Text.Histories.Header.Graph}" HorizontalAlignment="Left"/>
+              <TextBlock Classes="table_header" Margin="10,0,0,0" Text="{DynamicResource Text.Histories.Header.Graph}" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis"/>
             </DataGridTemplateColumn.Header>
 
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate DataType="m:Commit">
-                <Border Background="Transparent"/>
+                <Border Background="Transparent">
+                  <!-- Hover area over the commit's node (drawn by the graph above) that shows its author's name. -->
+                  <Border Width="22" Height="22"
+                          CornerRadius="11"
+                          HorizontalAlignment="Left" VerticalAlignment="Center"
+                          Margin="{Binding GraphX, Converter={x:Static c:DoubleConverters.ToGraphNodeMargin}}"
+                          Background="Transparent"
+                          ToolTip.Tip="{Binding Author.DisplayName}"/>
+                </Border>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
@@ -366,6 +370,7 @@
       <v:CommitGraph x:Name="CommitGraph"
                      Margin="0,30,0,0"
                      Graph="{Binding Graph}"
+                     SelectedCommits="{Binding SelectedCommits, Mode=OneWay}"
                      DotBrush="{DynamicResource Brush.Contents}"
                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                      IsHitTestVisible="False"

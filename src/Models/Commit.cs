@@ -26,12 +26,20 @@ namespace CommitDock.Models
 
         public bool IsMerged { get; set; } = false;
         public int Color { get; set; } = 0;
-        public double LeftMargin { get; set; } = 0;
 
         public bool IsHighlightedInGraph
         {
             get => _isHighlightedInGraph;
             set => SetProperty(ref _isHighlightedInGraph, value);
+        }
+
+        /// <summary>
+        ///     Horizontal center of this commit's node, relative to the left edge of the graph column.
+        /// </summary>
+        public double GraphX
+        {
+            get => _graphX;
+            set => SetProperty(ref _graphX, value);
         }
 
         public bool IsCommitterVisible => !Author.Equals(Committer) || AuthorTime != CommitterTime;
@@ -126,6 +134,7 @@ namespace CommitDock.Models
         }
 
         private bool _isHighlightedInGraph = false;
+        private double _graphX = 0;
     }
 
     public class CommitFullMessage

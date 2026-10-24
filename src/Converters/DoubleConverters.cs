@@ -19,5 +19,8 @@ namespace CommitDock.Converters
 
         public static readonly FuncValueConverter<double, Thickness> ToLeftMargin =
             new FuncValueConverter<double, Thickness>(v => new Thickness(v, 0, 0, 0));
+
+        public static readonly FuncValueConverter<double, Thickness> ToGraphNodeMargin =
+            new FuncValueConverter<double, Thickness>(v => new Thickness(v - Views.CommitGraph.AVATAR_RADIUS - 1, 0, 0, 0));
     }
 }
