@@ -13,7 +13,9 @@ See your whole history at a glance, stage and commit next to the graph, and revi
 [![Release build](https://img.shields.io/github/actions/workflow/status/mzaeemnasir/Commit-Dock/release.yml?label=release%20build)](https://github.com/mzaeemnasir/Commit-Dock/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/github/license/mzaeemnasir/Commit-Dock?color=blue)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-555)
+[![Website](https://img.shields.io/badge/website-commit--dock.mzaeemnasir.com-6a57f0)](https://commit-dock.mzaeemnasir.com)
 
+[**Website**](https://commit-dock.mzaeemnasir.com) ·
 [**Download**](https://github.com/mzaeemnasir/Commit-Dock/releases/latest) ·
 [Features](#features) ·
 [Installation](#installation) ·
@@ -75,7 +77,7 @@ See your whole history at a glance, stage and commit next to the graph, and revi
 
 ## Installation
 
-Download the file for your system from the [latest release](https://github.com/mzaeemnasir/Commit-Dock/releases/latest).
+Download the file for your system from the [website](https://commit-dock.mzaeemnasir.com/#download) or the [latest release](https://github.com/mzaeemnasir/Commit-Dock/releases/latest).
 
 | System | File | How to install |
 |---|---|---|
