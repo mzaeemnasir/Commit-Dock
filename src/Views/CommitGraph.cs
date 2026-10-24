@@ -345,7 +345,7 @@ namespace CommitDock.Views
                 using (context.PushOpacity(dot.IsHighlighted ? 1.0 : 0.4))
                     DrawAvatar(context, dot, center, typeface, isDark);
 
-                context.DrawEllipse(null, new Pen(pen.Brush, dot.IsHead ? 2.5 : 2), center, AVATAR_RADIUS, AVATAR_RADIUS);
+                context.DrawEllipse(null, new Pen(pen.Brush, dot.IsHead ? 1.75 : 1.25), center, AVATAR_RADIUS, AVATAR_RADIUS);
             }
         }
 

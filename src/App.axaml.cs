@@ -59,7 +59,7 @@ namespace CommitDock
             builder.WithInterFont();
             builder.With(new FontManagerOptions()
             {
-                DefaultFamilyName = "fonts:Inter#Inter"
+                DefaultFamilyName = "fonts:CommitDock#Ubuntu"
             });
             builder.ConfigureFonts(manager =>
             {
@@ -174,6 +174,30 @@ namespace CommitDock
                 Models.CommitGraph.SetDefaultPens(ActualThemeVariant.IsDark(), _graphPenThickness);
         }
 
+        /// <summary>
+        ///     Font names the app ships with. They can be picked by plain name in Preferences.
+        /// </summary>
+        public static readonly string[] BundledFonts = ["Ubuntu", "Inter", "JetBrains Mono NL"];
+
+        public static string MapBundledFonts(string fonts)
+        {
+            if (string.IsNullOrEmpty(fonts))
+                return fonts;
+
+            var parts = fonts.Split(',');
+            for (var i = 0; i < parts.Length; i++)
+            {
+                parts[i] = parts[i] switch
+                {
+                    "Ubuntu" => "fonts:CommitDock#Ubuntu",
+                    "Inter" => "fonts:Inter#Inter",
+                    "JetBrains Mono NL" => "fonts:CommitDock#JetBrains Mono NL",
+                    var other => other,
+                };
+            }
+            return string.Join(',', parts);
+        }
+
         public static void SetFonts(string defaultFont, string monospaceFont)
         {
             if (Current is not App app)
@@ -185,8 +209,8 @@ namespace CommitDock
                 app._fontsOverrides = null;
             }
 
-            defaultFont = StringExtensions.FormatFontNames(defaultFont);
-            monospaceFont = StringExtensions.FormatFontNames(monospaceFont);
+            defaultFont = MapBundledFonts(StringExtensions.FormatFontNames(defaultFont));
+            monospaceFont = MapBundledFonts(StringExtensions.FormatFontNames(monospaceFont));
 
             var resDic = new ResourceDictionary();
             if (!string.IsNullOrEmpty(defaultFont))
