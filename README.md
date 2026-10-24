@@ -39,7 +39,7 @@ See your whole history at a glance, stage and commit next to the graph, and revi
 ## Features
 
 ### History and graph
-- **Readable commit graph** with colored lanes, author avatars and branch/tag labels right next to the lines they belong to
+- **Readable commit graph** with straight colored lanes, rounded merge and branch curves, author avatars and branch/tag labels right next to the lines they belong to
 - **Work-in-progress row** at the top of the graph shows your uncommitted changes; click it to review and commit without leaving the history
 - **Diffs over the graph**: open any changed file in place, press `Esc` to go back
 - Fast search by message, author, committer, file path or SHA, plus file and folder history and blame
