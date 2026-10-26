@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -13,7 +12,6 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
 using Avalonia.Platform;
-using Avalonia.Styling;
 using Avalonia.Threading;
 
 namespace CommitDock
@@ -25,6 +23,7 @@ namespace CommitDock
         public static void Main(string[] args)
         {
             Native.OS.SetupBasicDirectories();
+            args = Models.SelfUpdater.HandleRelaunchArgs(args);
 
             AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             {
@@ -506,6 +505,7 @@ namespace CommitDock
 
             Native.OS.SetupExternalTools();
             Models.AvatarManager.Instance.Start();
+            Task.Run(Models.SelfUpdater.CleanupAfterUpdate);
 
             if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
             {
@@ -531,6 +531,7 @@ namespace CommitDock
             _launcher = new ViewModels.Launcher(startupRepo);
             desktop.MainWindow = new Views.Launcher() { DataContext = _launcher };
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            NotifyIfJustUpdated();
 
             // Fix macOS crash when quiting from Dock
             if (OperatingSystem.IsMacOS())
@@ -571,62 +572,55 @@ namespace CommitDock
             if (_launcher != null)
                 _launcher.NewVersion = null;
 
+            if (manually)
+            {
+                ShowSelfUpdateDialog();
+                return;
+            }
+
             Task.Run(async () =>
             {
                 try
                 {
-                    // Fetch latest release information.
-                    using var client = new HttpClient();
-                    client.Timeout = TimeSpan.FromSeconds(5);
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("CommitDock");
-                    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-
-                    var data = await client.GetStringAsync("https://api.github.com/repos/mzaeemnasir/Commit-Dock/releases/latest");
-                    var ver = JsonSerializer.Deserialize(data, JsonCodeGen.Default.Version);
-                    if (ver == null)
+                    var ver = await Models.SelfUpdater.FetchLatestReleaseAsync();
+                    if (ver == null || !ver.IsNewVersion || ver.TagName == ViewModels.Preferences.Instance.IgnoreUpdateTag)
                         return;
 
-                    if (manually)
+                    Dispatcher.UIThread.Post(() =>
                     {
-                        if (ver.IsNewVersion)
-                            ShowSelfUpdateResult(ver);
-                        else
-                            ShowSelfUpdateResult(new Models.AlreadyUpToDate());
-                    }
-                    else if (_launcher != null)
-                    {
-                        if (!ver.IsNewVersion || ver.TagName == ViewModels.Preferences.Instance.IgnoreUpdateTag)
-                            return;
-
-                        _launcher.NewVersion = ver;
-                    }
+                        if (_launcher != null)
+                            _launcher.NewVersion = ver;
+                    });
                 }
-                catch (Exception e)
+                catch
                 {
-                    if (manually)
-                        ShowSelfUpdateResult(new Models.SelfUpdateFailed(e));
+                    // A failed background check is not worth bothering the user with.
                 }
             });
         }
 
-        private void ShowSelfUpdateResult(object data)
+        private void ShowSelfUpdateDialog()
         {
-            try
+            Dispatcher.UIThread.Post(async () =>
             {
-                Dispatcher.UIThread.Invoke(async () =>
+                if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
                 {
-                    if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
-                    {
-                        var ctx = new ViewModels.SelfUpdate { Data = data };
-                        var dialog = new Views.SelfUpdate() { DataContext = ctx };
-                        await dialog.ShowDialog(owner);
-                    }
-                });
-            }
-            catch
-            {
-                // Ignore exceptions.
-            }
+                    var vm = new ViewModels.SelfUpdate();
+                    var dialog = new Views.SelfUpdate() { DataContext = vm };
+                    _ = vm.CheckAsync();
+                    await dialog.ShowDialog(owner);
+                }
+            });
+        }
+
+        private void NotifyIfJustUpdated()
+        {
+            var previous = Models.SelfUpdater.ConsumePostUpdateMarker();
+            var current = Models.SelfUpdater.CurrentVersionString;
+            if (string.IsNullOrEmpty(previous) || previous.Equals(current, StringComparison.Ordinal))
+                return;
+
+            Dispatcher.UIThread.Post(() => Models.Notification.Send(null, Text("SelfUpdate.Updated", current)), DispatcherPriority.Background);
         }
         #endregion
 

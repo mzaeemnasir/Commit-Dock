@@ -56,7 +56,7 @@ namespace CommitDock.Views
             base.OnDataContextChanged(e);
 
             if (DataContext is Models.Version ver)
-                Text = ver.Body;
+                Text = ver.Body ?? string.Empty;
         }
 
         private TextMate.Installation _textMate = null;
@@ -70,6 +70,23 @@ namespace CommitDock.Views
             InitializeComponent();
         }
 
+        protected override void OnClosing(WindowClosingEventArgs e)
+        {
+            base.OnClosing(e);
+
+            if (DataContext is not ViewModels.SelfUpdate vm)
+                return;
+
+            // The files are being swapped right now, so the window stays until the new version takes over.
+            if (vm.IsInstalling)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            vm.Cancel();
+        }
+
         private void CloseWindow(object _1, RoutedEventArgs _2)
         {
             Close();
@@ -77,16 +94,42 @@ namespace CommitDock.Views
 
         private void GotoDownload(object _, RoutedEventArgs e)
         {
-            Native.OS.OpenBrowser("https://github.com/mzaeemnasir/Commit-Dock/releases/latest");
+            if (DataContext is ViewModels.SelfUpdate vm)
+                vm.OpenReleasePage();
+
             e.Handled = true;
         }
 
-        private void IgnoreThisVersion(object sender, RoutedEventArgs e)
+        private void IgnoreThisVersion(object _, RoutedEventArgs e)
         {
-            if (sender is Button { DataContext: Models.Version ver })
-                ViewModels.Preferences.Instance.IgnoreUpdateTag = ver.TagName;
+            if (DataContext is ViewModels.SelfUpdate vm)
+                vm.SkipThisVersion();
 
             Close();
+            e.Handled = true;
+        }
+
+        private async void StartUpdate(object _, RoutedEventArgs e)
+        {
+            e.Handled = true;
+
+            if (DataContext is ViewModels.SelfUpdate vm)
+                await vm.InstallAsync();
+        }
+
+        private void CancelUpdate(object _, RoutedEventArgs e)
+        {
+            if (DataContext is ViewModels.SelfUpdate vm)
+                vm.Cancel();
+
+            e.Handled = true;
+        }
+
+        private void RevealDownload(object _, RoutedEventArgs e)
+        {
+            if (DataContext is ViewModels.SelfUpdate vm)
+                vm.RevealDownloadedFile();
+
             e.Handled = true;
         }
     }
