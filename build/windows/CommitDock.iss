@@ -73,8 +73,16 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; In-app updates run Setup silently with /UPDATE=1 and rely on it to start the new version when it is done.
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: IsInAppUpdate
 
 [Code]
+// True when Setup was started by Commit Dock itself to install an update (see src/Models/SelfUpdater.cs).
+function IsInAppUpdate(): Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
 // Commit Dock drives the git command line, so warn (without blocking) when git is not on PATH.
 function IsGitInstalled(): Boolean;
 var
