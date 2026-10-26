@@ -66,7 +66,7 @@ See your whole history at a glance, stage and commit next to the graph, and revi
 ### Built to stay out of your way
 - **Command palette** (`Ctrl+Shift+P` / `⌘⇧P`) and keyboard shortcuts for everything; press `F1` to see them
 - **Workspaces** and tabs for juggling many repositories, plus custom actions for your own scripts
-- **Eight themes**: Dark (default), Obsidian, Abyss, Forest, Ember, Nebula, Arctic and Light, or load your own theme file
+- **Nine themes**: Dark (default), Obsidian, Abyss, Forest, Ember, Nebula, Arctic, Mono (pure black and white) and Light, or load your own theme file
 - Available in 16 languages: English, Deutsch, Ελληνικά, Español, Français, עברית, Bahasa Indonesia, Italiano, 日本語, 한국어, Português (Brasil), Русский, தமிழ், Українська, 简体中文 and 繁體中文
 
 ## Screenshots

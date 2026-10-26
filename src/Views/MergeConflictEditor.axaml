@@ -251,8 +251,8 @@
                         CommandParameter="{x:Static m:ConflictResolution.UseTheirs}"/>
                 <Button Classes="flat primary">
                   <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="{DynamicResource Text.MergeConflictEditor.UseBoth}" Foreground="White"/>
-                    <Path Width="12" Height="12" Margin="4,4,0,0" Data="{StaticResource Icons.Down}" Fill="White"/>
+                    <TextBlock Text="{DynamicResource Text.MergeConflictEditor.UseBoth}" Foreground="{DynamicResource Brush.OnAccent}"/>
+                    <Path Width="12" Height="12" Margin="4,4,0,0" Data="{StaticResource Icons.Down}" Fill="{DynamicResource Brush.OnAccent}"/>
                   </StackPanel>
                   <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
