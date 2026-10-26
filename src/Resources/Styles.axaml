@@ -785,6 +785,9 @@
   <Style Selector="Button.flat.primary Path">
     <Setter Property="Fill" Value="{DynamicResource Brush.OnAccent}"/>
   </Style>
+  <Style Selector="Button.flat.primary TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}"/>
+  </Style>
   <Style Selector="Button.flat.success">
     <Setter Property="Foreground" Value="White"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.SuccessBadge}"/>
