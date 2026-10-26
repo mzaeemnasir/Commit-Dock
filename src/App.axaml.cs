@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
 using Avalonia.Platform;
+using Avalonia.Styling;
 using Avalonia.Threading;
 
 namespace CommitDock
@@ -125,6 +126,7 @@ namespace CommitDock
             app.RequestedThemeVariant = Models.ThemeVariants.Parse(theme);
             app._graphPalette = Models.ThemeVariants.GetGraphPalette(app.RequestedThemeVariant);
             app._graphPenThickness = 2;
+            app._accentOverride = null;
 
             if (app._themeOverrides != null)
             {
@@ -142,7 +144,7 @@ namespace CommitDock
                     foreach (var kv in overrides.BasicColors)
                     {
                         if (kv.Key.Equals("SystemAccentColor", StringComparison.Ordinal))
-                            resDic["SystemAccentColor"] = kv.Value;
+                            app._accentOverride = kv.Value;
                         else
                             resDic[$"Color.{kv.Key}"] = kv.Value;
                     }
@@ -160,7 +162,78 @@ namespace CommitDock
                 }
             }
 
+            app.ApplyAccent();
             app.ApplyGraphPens();
+        }
+
+        /// <summary>
+        ///     Looks a color up for a specific theme variant, ignoring the accent and override resources that
+        ///     <see cref="SetTheme"/> adds for the active theme, so previews of other themes show their own colors.
+        /// </summary>
+        public static bool TryGetThemeColor(string key, ThemeVariant variant, out Color color)
+        {
+            color = default;
+
+            if (Current is not App app)
+                return false;
+
+            foreach (var provider in app.Resources.MergedDictionaries)
+            {
+                if (ReferenceEquals(provider, app._accentResources) || ReferenceEquals(provider, app._themeOverrides))
+                    continue;
+
+                if (provider.TryGetResource(key, variant, out var value) && value is Color found)
+                {
+                    color = found;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///     Publishes the accent of the active theme (or of the overrides file) as top-level resources, together
+        ///     with the lighter and darker shades Fluent derives from it. Fluent resolves those keys against the plain
+        ///     Light/Dark variant, so without this every custom theme gets the Dark accent in sliders, toggles,
+        ///     radio buttons and hover states.
+        /// </summary>
+        private void ApplyAccent()
+        {
+            if (_accentResources != null)
+            {
+                Resources.MergedDictionaries.Remove(_accentResources);
+                _accentResources = null;
+            }
+
+            Color accent;
+            if (_accentOverride is { } overridden)
+                accent = overridden;
+            else if (TryGetResource("SystemAccentColor", ActualThemeVariant, out var value) && value is Color color)
+                accent = color;
+            else
+                return;
+
+            // Same lightness steps as Avalonia's SystemAccentColors.CalculateAccentShades.
+            var hsl = accent.ToHsl();
+            var resDic = new ResourceDictionary
+            {
+                ["SystemAccentColor"] = accent,
+                ["SystemAccentColorDark1"] = Shade(hsl, -28.5 / 255),
+                ["SystemAccentColorDark2"] = Shade(hsl, -49.0 / 255),
+                ["SystemAccentColorDark3"] = Shade(hsl, -74.5 / 255),
+                ["SystemAccentColorLight1"] = Shade(hsl, 39.0 / 255),
+                ["SystemAccentColorLight2"] = Shade(hsl, 70.0 / 255),
+                ["SystemAccentColorLight3"] = Shade(hsl, 103.0 / 255),
+            };
+
+            Resources.MergedDictionaries.Add(resDic);
+            _accentResources = resDic;
+        }
+
+        private static Color Shade(HslColor hsl, double lightnessDelta)
+        {
+            return new HslColor(hsl.A, hsl.H, hsl.S, Math.Clamp(hsl.L + lightnessDelta, 0, 1)).ToRgb();
         }
 
         private void ApplyGraphPens()
@@ -287,7 +360,11 @@ namespace CommitDock
             SetTheme(pref.Theme, pref.ThemeOverrides);
             SetFonts(pref.DefaultFontFamily, pref.MonospaceFontFamily);
 
-            ActualThemeVariantChanged += (_, _) => ApplyGraphPens();
+            ActualThemeVariantChanged += (_, _) =>
+            {
+                ApplyAccent();
+                ApplyGraphPens();
+            };
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -641,6 +718,8 @@ namespace CommitDock
         private ViewModels.Launcher _launcher = null;
         private ResourceDictionary _activeLocale = null;
         private ResourceDictionary _themeOverrides = null;
+        private ResourceDictionary _accentResources = null;
+        private Color? _accentOverride = null;
         private ResourceDictionary _fontsOverrides = null;
         private List<Color> _graphPalette = null;
         private double _graphPenThickness = 2;
