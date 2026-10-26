@@ -164,7 +164,7 @@ namespace CommitDock.ViewModels
                 var file = await Models.SelfUpdater.DownloadAsync(_asset, ReportProgress, token);
 
                 Stage = SelfUpdateStage.Installing;
-                await Models.SelfUpdater.InstallAsync(_kind, file);
+                await Models.SelfUpdater.InstallAsync(_kind, file, App.ReleaseSingleInstanceLock);
 
                 if (Models.SelfUpdater.NeedsSystemInstaller(_kind))
                 {

@@ -255,6 +255,19 @@ namespace CommitDock
             return Current is App app ? app._launcher : null;
         }
 
+        /// <summary>
+        ///     Frees the single-instance lock so the copy started by an in-app update is not taken for a second
+        ///     instance. Only called when this instance is about to quit.
+        /// </summary>
+        public static void ReleaseSingleInstanceLock()
+        {
+            if (Current is not App app)
+                return;
+
+            app._ipcChannel?.Dispose();
+            app._ipcChannel = null;
+        }
+
         public static void Quit(int exitCode)
         {
             if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
