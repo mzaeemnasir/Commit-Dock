@@ -1132,6 +1132,7 @@
   <x:String x:Key="Text.WorkingCopy.Staged.NoMatch.Title" xml:space="preserve">No matching staged changes</x:String>
   <x:String x:Key="Text.WorkingCopy.Staged.Unstage" xml:space="preserve">Unstage</x:String>
   <x:String x:Key="Text.WorkingCopy.Staged.UnstageAll" xml:space="preserve">Unstage All</x:String>
+  <x:String x:Key="Text.WorkingCopy.Staged.UnstageFile" xml:space="preserve">Unstage File</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged" xml:space="preserve">Unstaged</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.Empty.Desc" xml:space="preserve">Edits you make in the working tree show up here.</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.Empty.Title" xml:space="preserve">No unstaged changes</x:String>
@@ -1139,6 +1140,7 @@
   <x:String x:Key="Text.WorkingCopy.Unstaged.NoMatch.Title" xml:space="preserve">No matching unstaged changes</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.Stage" xml:space="preserve">Stage</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.StageAll" xml:space="preserve">Stage All</x:String>
+  <x:String x:Key="Text.WorkingCopy.Unstaged.StageFile" xml:space="preserve">Stage File</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.ViewAssumeUnchanged" xml:space="preserve">View Assume Unchanged</x:String>
   <x:String x:Key="Text.WorkingCopy.UseCommitTemplate" xml:space="preserve">Template: ${0}$</x:String>
   <x:String x:Key="Text.Workspace" xml:space="preserve">Workspace: </x:String>
