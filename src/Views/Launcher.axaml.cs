@@ -439,7 +439,7 @@ namespace CommitDock.Views
             {
                 vm.NewVersion = null;
 
-                var ctx = new ViewModels.SelfUpdate { Data = ver };
+                var ctx = new ViewModels.SelfUpdate(ver);
                 var dialog = new SelfUpdate() { DataContext = ctx };
                 await dialog.ShowDialog(this);
             }

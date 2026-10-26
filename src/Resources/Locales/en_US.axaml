@@ -915,12 +915,23 @@
   <x:String x:Key="Text.ScanRepositories.UseCustomDir" xml:space="preserve">Scan another custom directory</x:String>
   <x:String x:Key="Text.SelfUpdate" xml:space="preserve">Check for Updates...</x:String>
   <x:String x:Key="Text.SelfUpdate.Available" xml:space="preserve">New version of this software is available: </x:String>
+  <x:String x:Key="Text.SelfUpdate.Checking" xml:space="preserve">Checking for updates...</x:String>
   <x:String x:Key="Text.SelfUpdate.CurrentVersion" xml:space="preserve">Current Version: </x:String>
+  <x:String x:Key="Text.SelfUpdate.Downloading" xml:space="preserve">Downloading {0}</x:String>
   <x:String x:Key="Text.SelfUpdate.Error" xml:space="preserve">Check for updates failed!</x:String>
   <x:String x:Key="Text.SelfUpdate.GotoDownload" xml:space="preserve">Download</x:String>
+  <x:String x:Key="Text.SelfUpdate.HandedToSystem" xml:space="preserve">The package has been downloaded and opened with the package installer of your system. Finish the installation there, then restart Commit Dock.</x:String>
   <x:String x:Key="Text.SelfUpdate.IgnoreThisVersion" xml:space="preserve">Skip This Version</x:String>
+  <x:String x:Key="Text.SelfUpdate.InstallFailed" xml:space="preserve">The update could not be installed.</x:String>
+  <x:String x:Key="Text.SelfUpdate.Installing" xml:space="preserve">Installing the update. Commit Dock will restart in a moment...</x:String>
+  <x:String x:Key="Text.SelfUpdate.InstallNow" xml:space="preserve">Update Now</x:String>
+  <x:String x:Key="Text.SelfUpdate.Later" xml:space="preserve">Remind Me Later</x:String>
+  <x:String x:Key="Text.SelfUpdate.OpenReleasePage" xml:space="preserve">Open Release Page</x:String>
   <x:String x:Key="Text.SelfUpdate.ReleaseDate" xml:space="preserve">New Version Release Date: </x:String>
+  <x:String x:Key="Text.SelfUpdate.Retry" xml:space="preserve">Try Again</x:String>
+  <x:String x:Key="Text.SelfUpdate.ShowInFolder" xml:space="preserve">Show in Folder</x:String>
   <x:String x:Key="Text.SelfUpdate.Title" xml:space="preserve">Software Update</x:String>
+  <x:String x:Key="Text.SelfUpdate.Updated" xml:space="preserve">Commit Dock has been updated to {0}.</x:String>
   <x:String x:Key="Text.SelfUpdate.UpToDate" xml:space="preserve">There are currently no updates available.</x:String>
   <x:String x:Key="Text.SetPushUrl" xml:space="preserve">Set Push URL for Remote</x:String>
   <x:String x:Key="Text.SetPushUrl.PushURL" xml:space="preserve">Push URL:</x:String>
