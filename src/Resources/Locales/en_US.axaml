@@ -985,6 +985,12 @@
   <x:String x:Key="Text.StashDropConfirm.Label" xml:space="preserve">Drop:</x:String>
   <x:String x:Key="Text.Stashes" xml:space="preserve">Stashes</x:String>
   <x:String x:Key="Text.Stashes.Changes" xml:space="preserve">Changes</x:String>
+  <x:String x:Key="Text.Stashes.Empty.Desc" xml:space="preserve">Use the Stash button in the toolbar to set changes aside. They show up here.</x:String>
+  <x:String x:Key="Text.Stashes.Empty.Title" xml:space="preserve">No stashes yet</x:String>
+  <x:String x:Key="Text.Stashes.NoMatch.Desc" xml:space="preserve">No stash matches the current search.</x:String>
+  <x:String x:Key="Text.Stashes.NoMatch.Title" xml:space="preserve">No matching stashes</x:String>
+  <x:String x:Key="Text.Stashes.NoSelection.Desc" xml:space="preserve">Pick a stash above to see the files it changed.</x:String>
+  <x:String x:Key="Text.Stashes.NoSelection.Title" xml:space="preserve">No stash selected</x:String>
   <x:String x:Key="Text.Stashes.Stashes" xml:space="preserve">Stashes</x:String>
   <x:String x:Key="Text.Statistics" xml:space="preserve">Statistics</x:String>
   <x:String x:Key="Text.Statistics.Commits" xml:space="preserve">Commits</x:String>
@@ -1120,9 +1126,17 @@
   <x:String x:Key="Text.WorkingCopy.ResetAuthor" xml:space="preserve">Reset Author</x:String>
   <x:String x:Key="Text.WorkingCopy.SignOff" xml:space="preserve">SignOff</x:String>
   <x:String x:Key="Text.WorkingCopy.Staged" xml:space="preserve">Staged</x:String>
+  <x:String x:Key="Text.WorkingCopy.Staged.Empty.Desc" xml:space="preserve">Stage changes from the list above to include them in your next commit.</x:String>
+  <x:String x:Key="Text.WorkingCopy.Staged.Empty.Title" xml:space="preserve">Nothing staged</x:String>
+  <x:String x:Key="Text.WorkingCopy.Staged.NoMatch.Desc" xml:space="preserve">No staged change matches the current filter.</x:String>
+  <x:String x:Key="Text.WorkingCopy.Staged.NoMatch.Title" xml:space="preserve">No matching staged changes</x:String>
   <x:String x:Key="Text.WorkingCopy.Staged.Unstage" xml:space="preserve">Unstage</x:String>
   <x:String x:Key="Text.WorkingCopy.Staged.UnstageAll" xml:space="preserve">Unstage All</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged" xml:space="preserve">Unstaged</x:String>
+  <x:String x:Key="Text.WorkingCopy.Unstaged.Empty.Desc" xml:space="preserve">Edits you make in the working tree show up here.</x:String>
+  <x:String x:Key="Text.WorkingCopy.Unstaged.Empty.Title" xml:space="preserve">No unstaged changes</x:String>
+  <x:String x:Key="Text.WorkingCopy.Unstaged.NoMatch.Desc" xml:space="preserve">No unstaged change matches the current filter.</x:String>
+  <x:String x:Key="Text.WorkingCopy.Unstaged.NoMatch.Title" xml:space="preserve">No matching unstaged changes</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.Stage" xml:space="preserve">Stage</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.StageAll" xml:space="preserve">Stage All</x:String>
   <x:String x:Key="Text.WorkingCopy.Unstaged.ViewAssumeUnchanged" xml:space="preserve">View Assume Unchanged</x:String>

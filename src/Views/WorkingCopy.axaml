@@ -149,17 +149,34 @@
         </Border>
 
         <!-- Unstaged Changes -->
-        <v:ChangeCollectionView Grid.Row="1"
-                                x:Name="UnstagedChangesView"
-                                IsUnstagedChange="True"
-                                Background="{DynamicResource Brush.Contents}"
-                                ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode}"
-                                EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
-                                Changes="{Binding VisibleUnstaged}"
-                                Selection="{Binding SelectedUnstaged, Mode=TwoWay}"
-                                ContextRequested="OnUnstagedContextRequested"
-                                ChangeDoubleTapped="OnUnstagedChangeDoubleTapped"
-                                KeyDown="OnUnstagedKeyDown"/>
+        <Grid Grid.Row="1">
+          <v:ChangeCollectionView x:Name="UnstagedChangesView"
+                                  IsUnstagedChange="True"
+                                  Background="{DynamicResource Brush.Contents}"
+                                  ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode}"
+                                  EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
+                                  Changes="{Binding VisibleUnstaged}"
+                                  Selection="{Binding SelectedUnstaged, Mode=TwoWay}"
+                                  ContextRequested="OnUnstagedContextRequested"
+                                  ChangeDoubleTapped="OnUnstagedChangeDoubleTapped"
+                                  KeyDown="OnUnstagedKeyDown"/>
+
+          <v:EmptyState Icon="{StaticResource Icons.Changes}"
+                        Title="{DynamicResource Text.WorkingCopy.Unstaged.Empty.Title}"
+                        Description="{DynamicResource Text.WorkingCopy.Unstaged.Empty.Desc}"
+                        IsVisible="{Binding Unstaged, Converter={x:Static c:ListConverters.IsNullOrEmpty}}"/>
+
+          <v:EmptyState Icon="{StaticResource Icons.Search}"
+                        Title="{DynamicResource Text.WorkingCopy.Unstaged.NoMatch.Title}"
+                        Description="{DynamicResource Text.WorkingCopy.Unstaged.NoMatch.Desc}">
+            <v:EmptyState.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="Unstaged" Converter="{x:Static c:ListConverters.IsNotNullOrEmpty}"/>
+                <Binding Path="VisibleUnstaged" Converter="{x:Static c:ListConverters.IsNullOrEmpty}"/>
+              </MultiBinding>
+            </v:EmptyState.IsVisible>
+          </v:EmptyState>
+        </Grid>
       </Grid>
 
       <!-- Splitter -->
@@ -209,17 +226,34 @@
         </Border>
 
         <!-- Staged Changes -->
-        <v:ChangeCollectionView Grid.Row="1"
-                                x:Name="StagedChangesView"
-                                IsUnstagedChange="False"
-                                Background="{DynamicResource Brush.Contents}"
-                                ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode}"
-                                EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
-                                Changes="{Binding VisibleStaged}"
-                                Selection="{Binding SelectedStaged, Mode=TwoWay}"
-                                ContextRequested="OnStagedContextRequested"
-                                ChangeDoubleTapped="OnStagedChangeDoubleTapped"
-                                KeyDown="OnStagedKeyDown"/>
+        <Grid Grid.Row="1">
+          <v:ChangeCollectionView x:Name="StagedChangesView"
+                                  IsUnstagedChange="False"
+                                  Background="{DynamicResource Brush.Contents}"
+                                  ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode}"
+                                  EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
+                                  Changes="{Binding VisibleStaged}"
+                                  Selection="{Binding SelectedStaged, Mode=TwoWay}"
+                                  ContextRequested="OnStagedContextRequested"
+                                  ChangeDoubleTapped="OnStagedChangeDoubleTapped"
+                                  KeyDown="OnStagedKeyDown"/>
+
+          <v:EmptyState Icon="{StaticResource Icons.Changes}"
+                        Title="{DynamicResource Text.WorkingCopy.Staged.Empty.Title}"
+                        Description="{DynamicResource Text.WorkingCopy.Staged.Empty.Desc}"
+                        IsVisible="{Binding Staged, Converter={x:Static c:ListConverters.IsNullOrEmpty}}"/>
+
+          <v:EmptyState Icon="{StaticResource Icons.Search}"
+                        Title="{DynamicResource Text.WorkingCopy.Staged.NoMatch.Title}"
+                        Description="{DynamicResource Text.WorkingCopy.Staged.NoMatch.Desc}">
+            <v:EmptyState.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="Staged" Converter="{x:Static c:ListConverters.IsNotNullOrEmpty}"/>
+                <Binding Path="VisibleStaged" Converter="{x:Static c:ListConverters.IsNullOrEmpty}"/>
+              </MultiBinding>
+            </v:EmptyState.IsVisible>
+          </v:EmptyState>
+        </Grid>
       </Grid>
     </Grid>
 

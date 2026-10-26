@@ -68,57 +68,74 @@
       </Border>
 
       <!-- Stash List -->
-      <ListBox Grid.Row="2"
-               Background="{DynamicResource Brush.Contents}"
-               ItemsSource="{Binding VisibleStashes}"
-               SelectedItem="{Binding SelectedStash, Mode=TwoWay}"
-               SelectionMode="Single"
-               KeyDown="OnStashListKeyDown"
-               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-               ScrollViewer.VerticalScrollBarVisibility="Auto">
-        <ListBox.Styles>
-          <Style Selector="ListBoxItem">
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Height" Value="50"/>
-          </Style>
-        </ListBox.Styles>
+      <Grid Grid.Row="2">
+        <ListBox Background="{DynamicResource Brush.Contents}"
+                 ItemsSource="{Binding VisibleStashes}"
+                 SelectedItem="{Binding SelectedStash, Mode=TwoWay}"
+                 SelectionMode="Single"
+                 KeyDown="OnStashListKeyDown"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Margin" Value="0"/>
+              <Setter Property="Padding" Value="0"/>
+              <Setter Property="Height" Value="50"/>
+            </Style>
+          </ListBox.Styles>
 
-        <ListBox.ItemsPanel>
-          <ItemsPanelTemplate>
-            <VirtualizingStackPanel Orientation="Vertical"/>
-          </ItemsPanelTemplate>
-        </ListBox.ItemsPanel>
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel Orientation="Vertical"/>
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
 
-        <ListBox.ItemTemplate>
-          <DataTemplate DataType="m:Stash">
-            <Border Background="Transparent"
-                    BorderBrush="{DynamicResource Brush.Border2}" BorderThickness="0,0,0,1"
-                    Padding="4"
-                    ContextRequested="OnStashContextRequested"
-                    DoubleTapped="OnStashDoubleTapped"
-                    ToolTip.Tip="{Binding Message}">
-              <Grid RowDefinitions="Auto,*" >
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                  <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{DynamicResource Brush.Warning}"/>
-                  <v:DateTimePresenter Grid.Column="1"
-                                       Margin="8,0,0,0"
-                                       Timestamp="{Binding Time}"
-                                       Foreground="{DynamicResource Brush.FG2}"
-                                       FontFeatures="+tnum"/>
+          <ListBox.ItemTemplate>
+            <DataTemplate DataType="m:Stash">
+              <Border Background="Transparent"
+                      BorderBrush="{DynamicResource Brush.Border2}" BorderThickness="0,0,0,1"
+                      Padding="4"
+                      ContextRequested="OnStashContextRequested"
+                      DoubleTapped="OnStashDoubleTapped"
+                      ToolTip.Tip="{Binding Message}">
+                <Grid RowDefinitions="Auto,*" >
+                  <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{DynamicResource Brush.Warning}"/>
+                    <v:DateTimePresenter Grid.Column="1"
+                                         Margin="8,0,0,0"
+                                         Timestamp="{Binding Time}"
+                                         Foreground="{DynamicResource Brush.FG2}"
+                                         FontFeatures="+tnum"/>
+                  </Grid>
+
+                  <v:StashSubjectPresenter Grid.Row="1"
+                                           Subject="{Binding Subject}"
+                                           Foreground="{DynamicResource Brush.FG1}"
+                                           FontSize="{Binding Source={x:Static vm:Preferences.Instance}, Path=DefaultFontSize}"
+                                           PrefixBackground="{DynamicResource Brush.InlineCode}"
+                                           VerticalAlignment="Bottom"/>
                 </Grid>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
 
-                <v:StashSubjectPresenter Grid.Row="1"
-                                         Subject="{Binding Subject}"
-                                         Foreground="{DynamicResource Brush.FG1}"
-                                         FontSize="{Binding Source={x:Static vm:Preferences.Instance}, Path=DefaultFontSize}"
-                                         PrefixBackground="{DynamicResource Brush.InlineCode}"
-                                         VerticalAlignment="Bottom"/>
-              </Grid>
-            </Border>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+        <v:EmptyState Icon="{StaticResource Icons.Stashes}"
+                      Title="{DynamicResource Text.Stashes.Empty.Title}"
+                      Description="{DynamicResource Text.Stashes.Empty.Desc}"
+                      IsVisible="{Binding Stashes, Converter={x:Static c:ListConverters.IsNullOrEmpty}}"/>
+
+        <v:EmptyState Icon="{StaticResource Icons.Search}"
+                      Title="{DynamicResource Text.Stashes.NoMatch.Title}"
+                      Description="{DynamicResource Text.Stashes.NoMatch.Desc}">
+          <v:EmptyState.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.And}">
+              <Binding Path="Stashes" Converter="{x:Static c:ListConverters.IsNotNullOrEmpty}"/>
+              <Binding Path="VisibleStashes" Converter="{x:Static c:ListConverters.IsNullOrEmpty}"/>
+            </MultiBinding>
+          </v:EmptyState.IsVisible>
+        </v:EmptyState>
+      </Grid>
 
       <!-- Changes Bar -->
       <Border Grid.Row="3" BorderThickness="0,1" BorderBrush="{DynamicResource Brush.Border0}">
@@ -138,12 +155,25 @@
 
       <!-- View Changes -->
       <Border Grid.Row="4" Background="{DynamicResource Brush.Contents}">
-        <v:ChangeCollectionView ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode, Mode=OneWay}"
-                                EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
-                                Changes="{Binding Changes, Mode=OneWay}"
-                                Selection="{Binding ChangeSelection, Mode=TwoWay}"
-                                ContextRequested="OnChangeContextRequested"
-                                KeyDown="OnChangeCollectionViewKeyDown"/>
+        <Grid>
+          <v:ChangeCollectionView ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode, Mode=OneWay}"
+                                  EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
+                                  Changes="{Binding Changes, Mode=OneWay}"
+                                  Selection="{Binding ChangeSelection, Mode=TwoWay}"
+                                  ContextRequested="OnChangeContextRequested"
+                                  KeyDown="OnChangeCollectionViewKeyDown"/>
+
+          <v:EmptyState Icon="{StaticResource Icons.Changes}"
+                        Title="{DynamicResource Text.Stashes.NoSelection.Title}"
+                        Description="{DynamicResource Text.Stashes.NoSelection.Desc}">
+            <v:EmptyState.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="Stashes" Converter="{x:Static c:ListConverters.IsNotNullOrEmpty}"/>
+                <Binding Path="SelectedStash" Converter="{x:Static ObjectConverters.IsNull}"/>
+              </MultiBinding>
+            </v:EmptyState.IsVisible>
+          </v:EmptyState>
+        </Grid>
       </Border>
     </Grid>
 
