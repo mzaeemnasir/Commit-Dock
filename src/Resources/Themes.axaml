@@ -255,6 +255,35 @@
       <Color x:Key="Color.InlineCodeFG">#FFECEFF4</Color>
       <Color x:Key="Color.SubPanel">#FF272C36</Color>
     </ResourceDictionary>
+    <!-- Mono: pure black with white text and a white accent. Anything not set here falls back to Dark. -->
+    <ResourceDictionary x:Key="{x:Static m:ThemeVariants.Mono}">
+      <Color x:Key="SystemAccentColor">#FFFFFFFF</Color>
+      <Color x:Key="Color.Window">#FF000000</Color>
+      <Color x:Key="Color.WindowBorder">#FF3A3A3A</Color>
+      <Color x:Key="Color.TitleBar">#FF000000</Color>
+      <Color x:Key="Color.ToolBar">#FF000000</Color>
+      <Color x:Key="Color.Popup">#FF000000</Color>
+      <Color x:Key="Color.PopupBorder">#FF4A4A4A</Color>
+      <Color x:Key="Color.Contents">#FF000000</Color>
+      <Color x:Key="Color.Badge">#FF262626</Color>
+      <Color x:Key="Color.BadgeFG">#FFFFFFFF</Color>
+      <Color x:Key="Color.Conflict">#FFFFFFFF</Color>
+      <Color x:Key="Color.Conflict.Foreground">#FF000000</Color>
+      <Color x:Key="Color.Border0">#FF2E2E2E</Color>
+      <Color x:Key="Color.Border1">#FF8C8C8C</Color>
+      <Color x:Key="Color.Border2">#FF242424</Color>
+      <Color x:Key="Color.FlatButton.Background">#FF111111</Color>
+      <Color x:Key="Color.FlatButton.BackgroundHovered">#FF222222</Color>
+      <Color x:Key="Color.FlatButton.FloatingBorder">#FF3A3A3A</Color>
+      <Color x:Key="Color.FG1">#FFFFFFFF</Color>
+      <Color x:Key="Color.FG2">#FFB3B3B3</Color>
+      <Color x:Key="Color.Diff.EmptyBG">#14FFFFFF</Color>
+      <Color x:Key="Color.InlineCode">#FF1A1A1A</Color>
+      <Color x:Key="Color.InlineCodeFG">#FFFFFFFF</Color>
+      <Color x:Key="Color.SubPanel">#FF000000</Color>
+      <Color x:Key="Color.Hover">#1FFFFFFF</Color>
+      <Color x:Key="Color.OnAccent">#FF000000</Color>
+    </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
   <SolidColorBrush x:Key="Brush.Window" Color="{DynamicResource Color.Window}"/>
