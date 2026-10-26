@@ -146,9 +146,11 @@ namespace CommitDock.Models
         /// <summary>
         ///     Installs a downloaded release file. For packages Commit Dock can install itself this ends with the
         ///     new version (or the installer, which relaunches Commit Dock) being started, and the caller is
-        ///     expected to quit right after. Packages that need the package manager of the system are only opened.
+        ///     expected to quit right after. <paramref name="beforeRelaunch"/> runs once the files are swapped and
+        ///     just before the new version starts (used to free the single-instance lock). Packages that need the
+        ///     package manager of the system are only opened.
         /// </summary>
-        public static Task InstallAsync(UpdatePackageKind kind, string file)
+        public static Task InstallAsync(UpdatePackageKind kind, string file, Action beforeRelaunch = null)
         {
             return Task.Run(() =>
             {
@@ -162,15 +164,15 @@ namespace CommitDock.Models
                             InstallWindowsInstaller(file);
                             break;
                         case UpdatePackageKind.WindowsPortable:
-                            InstallWindowsPortable(file);
+                            InstallWindowsPortable(file, beforeRelaunch);
                             break;
                         case UpdatePackageKind.MacOSApp:
                             if (OperatingSystem.IsMacOS())
-                                InstallMacOSApp(file);
+                                InstallMacOSApp(file, beforeRelaunch);
                             break;
                         case UpdatePackageKind.LinuxAppImage:
                             if (OperatingSystem.IsLinux())
-                                InstallLinuxAppImage(file);
+                                InstallLinuxAppImage(file, beforeRelaunch);
                             break;
                         case UpdatePackageKind.LinuxDeb:
                         case UpdatePackageKind.LinuxRpm:
@@ -288,7 +290,7 @@ namespace CommitDock.Models
             Process.Start(start);
         }
 
-        private static void InstallWindowsPortable(string file)
+        private static void InstallWindowsPortable(string file, Action beforeRelaunch)
         {
             var exe = Environment.ProcessPath!;
             var exeName = Path.GetFileName(exe);
@@ -314,11 +316,11 @@ namespace CommitDock.Models
             }
 
             TryDeleteDirectory(stage);
-            Relaunch(exe, appDir);
+            Relaunch(exe, appDir, beforeRelaunch);
         }
 
         [SupportedOSPlatform("macos")]
-        private static void InstallMacOSApp(string file)
+        private static void InstallMacOSApp(string file, Action beforeRelaunch)
         {
             var bundle = GetMacOSBundlePath()
                 ?? throw new NotSupportedException("Commit Dock is not running from an application bundle.");
@@ -349,6 +351,8 @@ namespace CommitDock.Models
             TryDeleteDirectory(backup);
             TryDeleteDirectory(stage);
 
+            beforeRelaunch?.Invoke();
+
             var start = new ProcessStartInfo("/usr/bin/open") { UseShellExecute = false };
             start.ArgumentList.Add("-n");
             start.ArgumentList.Add(bundle);
@@ -359,7 +363,7 @@ namespace CommitDock.Models
         }
 
         [SupportedOSPlatform("linux")]
-        private static void InstallLinuxAppImage(string file)
+        private static void InstallLinuxAppImage(string file, Action beforeRelaunch)
         {
             var current = Environment.GetEnvironmentVariable("APPIMAGE");
             if (string.IsNullOrEmpty(current) || !File.Exists(current))
@@ -389,7 +393,7 @@ namespace CommitDock.Models
             }
 
             TryDeleteFile(backup);
-            Relaunch(current, Path.GetDirectoryName(current)!);
+            Relaunch(current, Path.GetDirectoryName(current)!, beforeRelaunch);
         }
 
         private static void OpenWithSystemInstaller(string file)
@@ -399,8 +403,10 @@ namespace CommitDock.Models
             Process.Start(start);
         }
 
-        private static void Relaunch(string executable, string workingDirectory)
+        private static void Relaunch(string executable, string workingDirectory, Action beforeRelaunch)
         {
+            beforeRelaunch?.Invoke();
+
             var start = new ProcessStartInfo(executable)
             {
                 WorkingDirectory = workingDirectory,
