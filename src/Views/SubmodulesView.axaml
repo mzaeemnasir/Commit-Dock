@@ -66,19 +66,19 @@
                     <Grid>
                       <TextBlock VerticalAlignment="Center"
                                  Text="{DynamicResource Text.Submodule.Status.NotInited}"
-                                 Foreground="White"
+                                 Foreground="{DynamicResource Brush.Warning.Foreground}"
                                  IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.NotInited}}"/>
                       <TextBlock VerticalAlignment="Center"
                                  Text="{DynamicResource Text.Submodule.Status.Modified}"
-                                 Foreground="White"
+                                 Foreground="{DynamicResource Brush.Warning.Foreground}"
                                  IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.Modified}}"/>
                       <TextBlock VerticalAlignment="Center"
                                  Text="{DynamicResource Text.Submodule.Status.RevisionChanged}"
-                                 Foreground="White"
+                                 Foreground="{DynamicResource Brush.Warning.Foreground}"
                                  IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.RevisionChanged}}"/>
                       <TextBlock VerticalAlignment="Center"
                                  Text="{DynamicResource Text.Submodule.Status.Unmerged}"
-                                 Foreground="White"
+                                 Foreground="{DynamicResource Brush.Warning.Foreground}"
                                  IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.Unmerged}}"/>
                     </Grid>
                   </Border>
@@ -201,19 +201,19 @@
                         <Grid>
                           <TextBlock VerticalAlignment="Center"
                                      Text="{DynamicResource Text.Submodule.Status.NotInited}"
-                                     Foreground="White"
+                                     Foreground="{DynamicResource Brush.Warning.Foreground}"
                                      IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.NotInited}}"/>
                           <TextBlock VerticalAlignment="Center"
                                      Text="{DynamicResource Text.Submodule.Status.Modified}"
-                                     Foreground="White"
+                                     Foreground="{DynamicResource Brush.Warning.Foreground}"
                                      IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.Modified}}"/>
                           <TextBlock VerticalAlignment="Center"
                                      Text="{DynamicResource Text.Submodule.Status.RevisionChanged}"
-                                     Foreground="White"
+                                     Foreground="{DynamicResource Brush.Warning.Foreground}"
                                      IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.RevisionChanged}}"/>
                           <TextBlock VerticalAlignment="Center"
                                      Text="{DynamicResource Text.Submodule.Status.Unmerged}"
-                                     Foreground="White"
+                                     Foreground="{DynamicResource Brush.Warning.Foreground}"
                                      IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static m:SubmoduleStatus.Unmerged}}"/>
                         </Grid>
                       </Border>

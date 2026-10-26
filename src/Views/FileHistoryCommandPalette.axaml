@@ -30,7 +30,7 @@
                   CornerRadius="4"
                   Margin="4,0,0,0" Padding="4,0">
             <TextBlock Text="{DynamicResource Text.FileHistory}"
-                       Foreground="Black"
+                       Foreground="{DynamicResource Brush.BadgeFG}"
                        FontWeight="Bold"/>
           </Border>
         </StackPanel>

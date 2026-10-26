@@ -45,6 +45,7 @@
       <Color x:Key="Color.Renamed">#FF2F74D0</Color>
       <Color x:Key="Color.Untracked">#FF6B7280</Color>
       <Color x:Key="Color.Warning">#FFC27803</Color>
+      <Color x:Key="Color.Warning.Foreground">#FF1C2030</Color>
       <Color x:Key="Color.Danger">#FFD63B47</Color>
       <Color x:Key="Color.Success">#FF1E9E5A</Color>
       <Color x:Key="Color.SuccessBadge">#FF1E874B</Color>
@@ -94,6 +95,7 @@
       <Color x:Key="Color.Renamed">#FF60A5FA</Color>
       <Color x:Key="Color.Untracked">#FF9CA3AF</Color>
       <Color x:Key="Color.Warning">#FFFBBF24</Color>
+      <Color x:Key="Color.Warning.Foreground">#FF1B1A26</Color>
       <Color x:Key="Color.Danger">#FFF87171</Color>
       <Color x:Key="Color.Success">#FF4ADE80</Color>
       <Color x:Key="Color.SuccessBadge">#FF1F8A4C</Color>
@@ -329,6 +331,7 @@
   <SolidColorBrush x:Key="Brush.Renamed" Color="{DynamicResource Color.Renamed}"/>
   <SolidColorBrush x:Key="Brush.Untracked" Color="{DynamicResource Color.Untracked}"/>
   <SolidColorBrush x:Key="Brush.Warning" Color="{DynamicResource Color.Warning}"/>
+  <SolidColorBrush x:Key="Brush.Warning.Foreground" Color="{DynamicResource Color.Warning.Foreground}"/>
   <SolidColorBrush x:Key="Brush.Danger" Color="{DynamicResource Color.Danger}"/>
   <SolidColorBrush x:Key="Brush.Success" Color="{DynamicResource Color.Success}"/>
   <SolidColorBrush x:Key="Brush.SuccessBadge" Color="{DynamicResource Color.SuccessBadge}"/>
