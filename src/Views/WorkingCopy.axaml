@@ -159,6 +159,7 @@
                                   Selection="{Binding SelectedUnstaged, Mode=TwoWay}"
                                   ContextRequested="OnUnstagedContextRequested"
                                   ChangeDoubleTapped="OnUnstagedChangeDoubleTapped"
+                                  ChangeActionRequested="OnUnstagedChangeActionRequested"
                                   KeyDown="OnUnstagedKeyDown"/>
 
           <v:EmptyState Icon="{StaticResource Icons.Changes}"
@@ -229,6 +230,7 @@
         <Grid Grid.Row="1">
           <v:ChangeCollectionView x:Name="StagedChangesView"
                                   IsUnstagedChange="False"
+                                  IsStagedChange="True"
                                   Background="{DynamicResource Brush.Contents}"
                                   ViewMode="{Binding Source={x:Static vm:Preferences.Instance}, Path=ChangeViewMode}"
                                   EnableCompactFolders="{Binding Source={x:Static vm:Preferences.Instance}, Path=EnableCompactFoldersInChangesTree}"
@@ -236,6 +238,7 @@
                                   Selection="{Binding SelectedStaged, Mode=TwoWay}"
                                   ContextRequested="OnStagedContextRequested"
                                   ChangeDoubleTapped="OnStagedChangeDoubleTapped"
+                                  ChangeActionRequested="OnStagedChangeActionRequested"
                                   KeyDown="OnStagedKeyDown"/>
 
           <v:EmptyState Icon="{StaticResource Icons.Changes}"

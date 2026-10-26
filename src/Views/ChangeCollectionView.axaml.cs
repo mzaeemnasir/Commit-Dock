@@ -33,6 +33,16 @@ namespace CommitDock.Views
         }
     }
 
+    public class ChangeActionEventArgs : RoutedEventArgs
+    {
+        public Models.Change Change { get; }
+
+        public ChangeActionEventArgs(RoutedEvent routedEvent, Models.Change change) : base(routedEvent)
+        {
+            Change = change;
+        }
+    }
+
     public class ChangeCollectionContainer : ListBoxEx
     {
         protected override Type StyleKeyOverride => typeof(ListBox);
@@ -103,7 +113,42 @@ namespace CommitDock.Views
         public bool IsUnstagedChange
         {
             get => _isUnstagedChange;
-            set => SetAndRaise(IsUnstagedChangeProperty, ref _isUnstagedChange, value);
+            set
+            {
+                if (SetAndRaise(IsUnstagedChangeProperty, ref _isUnstagedChange, value))
+                    UpdateHasRowAction();
+            }
+        }
+
+        public static readonly DirectProperty<ChangeCollectionView, bool> IsStagedChangeProperty =
+            AvaloniaProperty.RegisterDirect<ChangeCollectionView, bool>(
+                nameof(IsStagedChange),
+                static o => o.IsStagedChange,
+                static (o, v) => o.IsStagedChange = v);
+
+        /// <summary>
+        ///     True for the staged list of the working copy. Together with <see cref="IsUnstagedChange"/> it decides
+        ///     whether rows offer a hover action (Stage File / Unstage File).
+        /// </summary>
+        public bool IsStagedChange
+        {
+            get => _isStagedChange;
+            set
+            {
+                if (SetAndRaise(IsStagedChangeProperty, ref _isStagedChange, value))
+                    UpdateHasRowAction();
+            }
+        }
+
+        public static readonly DirectProperty<ChangeCollectionView, bool> HasRowActionProperty =
+            AvaloniaProperty.RegisterDirect<ChangeCollectionView, bool>(
+                nameof(HasRowAction),
+                static o => o.HasRowAction);
+
+        public bool HasRowAction
+        {
+            get => _hasRowAction;
+            private set => SetAndRaise(HasRowActionProperty, ref _hasRowAction, value);
         }
 
         public static readonly DirectProperty<ChangeCollectionView, Models.ChangeViewMode> ViewModeProperty =
@@ -161,6 +206,18 @@ namespace CommitDock.Views
         {
             add { AddHandler(ChangeDoubleTappedEvent, value); }
             remove { RemoveHandler(ChangeDoubleTappedEvent, value); }
+        }
+
+        public static readonly RoutedEvent<ChangeActionEventArgs> ChangeActionRequestedEvent =
+            RoutedEvent.Register<ChangeCollectionView, ChangeActionEventArgs>(nameof(ChangeActionRequested), RoutingStrategies.Bubble);
+
+        /// <summary>
+        ///     Raised when the Stage File / Unstage File button of a row is pressed.
+        /// </summary>
+        public event EventHandler<ChangeActionEventArgs> ChangeActionRequested
+        {
+            add { AddHandler(ChangeActionRequestedEvent, value); }
+            remove { RemoveHandler(ChangeActionRequestedEvent, value); }
         }
 
         public ChangeCollectionView()
@@ -334,6 +391,29 @@ namespace CommitDock.Views
             }
         }
 
+        private void OnRowActionClicked(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+
+            if (sender is not Control { DataContext: { } ctx })
+                return;
+
+            var change = ctx switch
+            {
+                Models.Change c => c,
+                ViewModels.ChangeTreeNode { IsFolder: false } node => node.Change,
+                _ => null,
+            };
+
+            if (change != null)
+                RaiseEvent(new ChangeActionEventArgs(ChangeActionRequestedEvent, change));
+        }
+
+        private void UpdateHasRowAction()
+        {
+            HasRowAction = _isUnstagedChange || _isStagedChange;
+        }
+
         private void OnRowSelectionChanged(object sender, SelectionChangedEventArgs _)
         {
             if (_disableSelectionChangingEvent || sender is not ListBox listBox)
@@ -487,6 +567,8 @@ namespace CommitDock.Views
         }
 
         private bool _isUnstagedChange = false;
+        private bool _isStagedChange = false;
+        private bool _hasRowAction = false;
         private Models.ChangeViewMode _viewMode = Models.ChangeViewMode.Tree;
         private bool _enableCompactFolders = false;
         private List<Models.Change> _changes = null;
