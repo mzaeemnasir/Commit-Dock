@@ -31,16 +31,16 @@
                   CornerRadius="4"
                   Margin="4,0,0,0" Padding="4,0">
             <StackPanel Orientation="Horizontal">
-              <TextBlock Text="{DynamicResource Text.Compare}" Foreground="Black" FontWeight="Bold"/>
+              <TextBlock Text="{DynamicResource Text.Compare}" Foreground="{DynamicResource Brush.BadgeFG}" FontWeight="Bold"/>
 
               <ContentControl Content="{Binding BasedOn}" Margin="4,0,0,0" MaxWidth="100">
                 <ContentControl.DataTemplates>
                   <DataTemplate DataType="m:Branch">
-                    <TextBlock Text="{Binding FriendlyName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding FriendlyName}" Foreground="{DynamicResource Brush.BadgeFG}" TextTrimming="CharacterEllipsis"/>
                   </DataTemplate>
 
                   <DataTemplate DataType="m:Tag">
-                    <TextBlock Text="{Binding Name}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource Brush.BadgeFG}" TextTrimming="CharacterEllipsis"/>
                   </DataTemplate>
                 </ContentControl.DataTemplates>
               </ContentControl>

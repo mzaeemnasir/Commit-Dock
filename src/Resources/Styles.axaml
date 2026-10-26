@@ -1170,7 +1170,7 @@
       <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
     </Style>
     <Style Selector="^:focus-visible:checked /template/ Path#Icon">
-      <Setter Property="Fill" Value="White"/>
+      <Setter Property="Fill" Value="{DynamicResource Brush.OnAccent}"/>
     </Style>
   </Style>
 
@@ -1229,8 +1229,8 @@
       <Setter Property="Fill" Value="{DynamicResource Brush.Accent}"/>
     </Style>
     <Style Selector="^:focus-visible /template/ Ellipse#Dot">
-      <Setter Property="Stroke" Value="White"/>
-      <Setter Property="Fill" Value="White"/>
+      <Setter Property="Stroke" Value="{DynamicResource Brush.OnAccent}"/>
+      <Setter Property="Fill" Value="{DynamicResource Brush.OnAccent}"/>
     </Style>
     <Style Selector="^:focus-visible:checked /template/ Ellipse#Dot">
       <Setter Property="Fill" Value="{DynamicResource Brush.Accent}"/>
