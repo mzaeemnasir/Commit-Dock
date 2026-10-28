@@ -207,6 +207,22 @@ namespace CommitDock.Views
             }
         }
 
+        private async void OnUnstagedChangeActionRequested(object _, ChangeActionEventArgs e)
+        {
+            e.Handled = true;
+
+            if (DataContext is ViewModels.WorkingCopy vm)
+                await vm.StageChangesAsync([e.Change], null);
+        }
+
+        private async void OnStagedChangeActionRequested(object _, ChangeActionEventArgs e)
+        {
+            e.Handled = true;
+
+            if (DataContext is ViewModels.WorkingCopy vm)
+                await vm.UnstageChangesAsync([e.Change], null);
+        }
+
         private async void OnUnstagedKeyDown(object _, KeyEventArgs e)
         {
             var cmdKey = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;

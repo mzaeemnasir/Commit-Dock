@@ -20,7 +20,7 @@ namespace CommitDock.Converters
             if (variant == null || variant == ThemeVariant.Default)
                 variant = Application.Current?.ActualThemeVariant;
 
-            if (Application.Current is { } app && app.TryGetResource(key, variant, out var value) && value is Color color)
+            if (variant != null && App.TryGetThemeColor(key, variant, out var color))
                 return new SolidColorBrush(color);
 
             return new SolidColorBrush(fallback);

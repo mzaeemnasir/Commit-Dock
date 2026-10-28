@@ -66,7 +66,8 @@ See your whole history at a glance, stage and commit next to the graph, and revi
 ### Built to stay out of your way
 - **Command palette** (`Ctrl+Shift+P` / `⌘⇧P`) and keyboard shortcuts for everything; press `F1` to see them
 - **Workspaces** and tabs for juggling many repositories, plus custom actions for your own scripts
-- **Eight themes**: Dark (default), Obsidian, Abyss, Forest, Ember, Nebula, Arctic and Light, or load your own theme file
+- **Nine themes**: Dark (default), Obsidian, Abyss, Forest, Ember, Nebula, Arctic, Mono (pure black and white) and Light, or load your own theme file
+- **In-app updates**: when a new release is out, Commit Dock downloads the right package for your system, installs it and restarts itself
 - Available in 16 languages: English, Deutsch, Ελληνικά, Español, Français, עברית, Bahasa Indonesia, Italiano, 日本語, 한국어, Português (Brasil), Русский, தமிழ், Українська, 简体中文 and 繁體中文
 
 ## Screenshots
@@ -89,6 +90,8 @@ Download the file for your system from the [website](https://commit-dock.mzaeemn
 | **Linux** (any distribution) | `CommitDock-v<version>-linux-amd64.AppImage` | `chmod +x` the file and run it. |
 
 ARM64 builds are published for every platform as well.
+
+Once installed, Commit Dock checks for new releases on startup and updates itself from **Check for Updates...** in the main menu. The Windows installer and portable build, the macOS app and the Linux AppImage are replaced in place; `.deb` and `.rpm` packages are downloaded and handed to your package installer.
 
 > [!NOTE]
 > Release builds are not code-signed yet.

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -25,6 +24,7 @@ namespace CommitDock
         public static void Main(string[] args)
         {
             Native.OS.SetupBasicDirectories();
+            args = Models.SelfUpdater.HandleRelaunchArgs(args);
 
             AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             {
@@ -126,6 +126,7 @@ namespace CommitDock
             app.RequestedThemeVariant = Models.ThemeVariants.Parse(theme);
             app._graphPalette = Models.ThemeVariants.GetGraphPalette(app.RequestedThemeVariant);
             app._graphPenThickness = 2;
+            app._accentOverride = null;
 
             if (app._themeOverrides != null)
             {
@@ -143,7 +144,7 @@ namespace CommitDock
                     foreach (var kv in overrides.BasicColors)
                     {
                         if (kv.Key.Equals("SystemAccentColor", StringComparison.Ordinal))
-                            resDic["SystemAccentColor"] = kv.Value;
+                            app._accentOverride = kv.Value;
                         else
                             resDic[$"Color.{kv.Key}"] = kv.Value;
                     }
@@ -161,7 +162,78 @@ namespace CommitDock
                 }
             }
 
+            app.ApplyAccent();
             app.ApplyGraphPens();
+        }
+
+        /// <summary>
+        ///     Looks a color up for a specific theme variant, ignoring the accent and override resources that
+        ///     <see cref="SetTheme"/> adds for the active theme, so previews of other themes show their own colors.
+        /// </summary>
+        public static bool TryGetThemeColor(string key, ThemeVariant variant, out Color color)
+        {
+            color = default;
+
+            if (Current is not App app)
+                return false;
+
+            foreach (var provider in app.Resources.MergedDictionaries)
+            {
+                if (ReferenceEquals(provider, app._accentResources) || ReferenceEquals(provider, app._themeOverrides))
+                    continue;
+
+                if (provider.TryGetResource(key, variant, out var value) && value is Color found)
+                {
+                    color = found;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///     Publishes the accent of the active theme (or of the overrides file) as top-level resources, together
+        ///     with the lighter and darker shades Fluent derives from it. Fluent resolves those keys against the plain
+        ///     Light/Dark variant, so without this every custom theme gets the Dark accent in sliders, toggles,
+        ///     radio buttons and hover states.
+        /// </summary>
+        private void ApplyAccent()
+        {
+            if (_accentResources != null)
+            {
+                Resources.MergedDictionaries.Remove(_accentResources);
+                _accentResources = null;
+            }
+
+            Color accent;
+            if (_accentOverride is { } overridden)
+                accent = overridden;
+            else if (TryGetResource("SystemAccentColor", ActualThemeVariant, out var value) && value is Color color)
+                accent = color;
+            else
+                return;
+
+            // Same lightness steps as Avalonia's SystemAccentColors.CalculateAccentShades.
+            var hsl = accent.ToHsl();
+            var resDic = new ResourceDictionary
+            {
+                ["SystemAccentColor"] = accent,
+                ["SystemAccentColorDark1"] = Shade(hsl, -28.5 / 255),
+                ["SystemAccentColorDark2"] = Shade(hsl, -49.0 / 255),
+                ["SystemAccentColorDark3"] = Shade(hsl, -74.5 / 255),
+                ["SystemAccentColorLight1"] = Shade(hsl, 39.0 / 255),
+                ["SystemAccentColorLight2"] = Shade(hsl, 70.0 / 255),
+                ["SystemAccentColorLight3"] = Shade(hsl, 103.0 / 255),
+            };
+
+            Resources.MergedDictionaries.Add(resDic);
+            _accentResources = resDic;
+        }
+
+        private static Color Shade(HslColor hsl, double lightnessDelta)
+        {
+            return new HslColor(hsl.A, hsl.H, hsl.S, Math.Clamp(hsl.L + lightnessDelta, 0, 1)).ToRgb();
         }
 
         private void ApplyGraphPens()
@@ -256,6 +328,19 @@ namespace CommitDock
             return Current is App app ? app._launcher : null;
         }
 
+        /// <summary>
+        ///     Frees the single-instance lock so the copy started by an in-app update is not taken for a second
+        ///     instance. Only called when this instance is about to quit.
+        /// </summary>
+        public static void ReleaseSingleInstanceLock()
+        {
+            if (Current is not App app)
+                return;
+
+            app._ipcChannel?.Dispose();
+            app._ipcChannel = null;
+        }
+
         public static void Quit(int exitCode)
         {
             if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -275,7 +360,11 @@ namespace CommitDock
             SetTheme(pref.Theme, pref.ThemeOverrides);
             SetFonts(pref.DefaultFontFamily, pref.MonospaceFontFamily);
 
-            ActualThemeVariantChanged += (_, _) => ApplyGraphPens();
+            ActualThemeVariantChanged += (_, _) =>
+            {
+                ApplyAccent();
+                ApplyGraphPens();
+            };
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -506,6 +595,7 @@ namespace CommitDock
 
             Native.OS.SetupExternalTools();
             Models.AvatarManager.Instance.Start();
+            Task.Run(Models.SelfUpdater.CleanupAfterUpdate);
 
             if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
             {
@@ -531,6 +621,7 @@ namespace CommitDock
             _launcher = new ViewModels.Launcher(startupRepo);
             desktop.MainWindow = new Views.Launcher() { DataContext = _launcher };
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            NotifyIfJustUpdated();
 
             // Fix macOS crash when quiting from Dock
             if (OperatingSystem.IsMacOS())
@@ -571,62 +662,55 @@ namespace CommitDock
             if (_launcher != null)
                 _launcher.NewVersion = null;
 
+            if (manually)
+            {
+                ShowSelfUpdateDialog();
+                return;
+            }
+
             Task.Run(async () =>
             {
                 try
                 {
-                    // Fetch latest release information.
-                    using var client = new HttpClient();
-                    client.Timeout = TimeSpan.FromSeconds(5);
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("CommitDock");
-                    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-
-                    var data = await client.GetStringAsync("https://api.github.com/repos/mzaeemnasir/Commit-Dock/releases/latest");
-                    var ver = JsonSerializer.Deserialize(data, JsonCodeGen.Default.Version);
-                    if (ver == null)
+                    var ver = await Models.SelfUpdater.FetchLatestReleaseAsync();
+                    if (ver == null || !ver.IsNewVersion || ver.TagName == ViewModels.Preferences.Instance.IgnoreUpdateTag)
                         return;
 
-                    if (manually)
+                    Dispatcher.UIThread.Post(() =>
                     {
-                        if (ver.IsNewVersion)
-                            ShowSelfUpdateResult(ver);
-                        else
-                            ShowSelfUpdateResult(new Models.AlreadyUpToDate());
-                    }
-                    else if (_launcher != null)
-                    {
-                        if (!ver.IsNewVersion || ver.TagName == ViewModels.Preferences.Instance.IgnoreUpdateTag)
-                            return;
-
-                        _launcher.NewVersion = ver;
-                    }
+                        if (_launcher != null)
+                            _launcher.NewVersion = ver;
+                    });
                 }
-                catch (Exception e)
+                catch
                 {
-                    if (manually)
-                        ShowSelfUpdateResult(new Models.SelfUpdateFailed(e));
+                    // A failed background check is not worth bothering the user with.
                 }
             });
         }
 
-        private void ShowSelfUpdateResult(object data)
+        private void ShowSelfUpdateDialog()
         {
-            try
+            Dispatcher.UIThread.Post(async () =>
             {
-                Dispatcher.UIThread.Invoke(async () =>
+                if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
                 {
-                    if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
-                    {
-                        var ctx = new ViewModels.SelfUpdate { Data = data };
-                        var dialog = new Views.SelfUpdate() { DataContext = ctx };
-                        await dialog.ShowDialog(owner);
-                    }
-                });
-            }
-            catch
-            {
-                // Ignore exceptions.
-            }
+                    var vm = new ViewModels.SelfUpdate();
+                    var dialog = new Views.SelfUpdate() { DataContext = vm };
+                    _ = vm.CheckAsync();
+                    await dialog.ShowDialog(owner);
+                }
+            });
+        }
+
+        private void NotifyIfJustUpdated()
+        {
+            var previous = Models.SelfUpdater.ConsumePostUpdateMarker();
+            var current = Models.SelfUpdater.CurrentVersionString;
+            if (string.IsNullOrEmpty(previous) || previous.Equals(current, StringComparison.Ordinal))
+                return;
+
+            Dispatcher.UIThread.Post(() => Models.Notification.Send(null, Text("SelfUpdate.Updated", current)), DispatcherPriority.Background);
         }
         #endregion
 
@@ -634,6 +718,8 @@ namespace CommitDock
         private ViewModels.Launcher _launcher = null;
         private ResourceDictionary _activeLocale = null;
         private ResourceDictionary _themeOverrides = null;
+        private ResourceDictionary _accentResources = null;
+        private Color? _accentOverride = null;
         private ResourceDictionary _fontsOverrides = null;
         private List<Color> _graphPalette = null;
         private double _graphPenThickness = 2;

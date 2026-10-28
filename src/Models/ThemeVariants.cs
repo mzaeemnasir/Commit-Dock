@@ -18,6 +18,7 @@ namespace CommitDock.Models
         public static readonly ThemeVariant Ember = new("Ember", ThemeVariant.Dark);
         public static readonly ThemeVariant Nebula = new("Nebula", ThemeVariant.Dark);
         public static readonly ThemeVariant Arctic = new("Arctic", ThemeVariant.Dark);
+        public static readonly ThemeVariant Mono = new("Mono", ThemeVariant.Dark);
 
         public static readonly List<ThemeVariant> Selectable =
         [
@@ -29,6 +30,7 @@ namespace CommitDock.Models
             Ember,
             Nebula,
             Arctic,
+            Mono,
             ThemeVariant.Light,
         ];
 
@@ -70,6 +72,8 @@ namespace CommitDock.Models
             [Ember] = ParseColors("#F59E0B", "#38BDF8", "#F472B6", "#84CC16", "#FB7185", "#2DD4BF", "#C084FC", "#FACC15", "#60A5FA", "#F97316", "#34D399", "#E879F9"),
             [Nebula] = ParseColors("#F472B6", "#A78BFA", "#22D3EE", "#FBBF24", "#4ADE80", "#FB923C", "#60A5FA", "#E879F9", "#2DD4BF", "#F87171", "#A3E635", "#38BDF8"),
             [Arctic] = ParseColors("#88C0D0", "#BF616A", "#EBCB8B", "#A3BE8C", "#B48EAD", "#D08770", "#81A1C1", "#8FBCBB", "#5E81AC", "#E5A3AE", "#C6D6A6", "#D8C2E0"),
+            // Mono has no tint of its own, so the lanes use saturated hues (ordered around the color wheel) that stay vivid on pure black.
+            [Mono] = ParseColors("#22D3EE", "#3B82F6", "#A855F7", "#E879F9", "#FB7185", "#EF4444", "#F97316", "#FACC15", "#A3E635", "#2DD4BF"),
         };
     }
 }
