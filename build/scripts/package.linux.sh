@@ -51,6 +51,8 @@ ln -rsf CommitDock.AppDir/opt/commitdock/commitdock CommitDock.AppDir/AppRun
 ln -rsf CommitDock.AppDir/usr/share/applications/io.github.mzaeemnasir.CommitDock.desktop CommitDock.AppDir
 cp resources/appimage/commitdock.appdata.xml CommitDock.AppDir/usr/share/metainfo/io.github.mzaeemnasir.CommitDock.appdata.xml
 
+chmod -R a+rX CommitDock.AppDir
+
 ARCH="$appimage_arch" ./appimagetool -v \
     -u "gh-releases-zsync|mzaeemnasir|Commit-Dock|latest|CommitDock-v*-linux-$arch.AppImage.zsync" \
     CommitDock.AppDir "CommitDock-v$VERSION-linux-$arch.AppImage"
